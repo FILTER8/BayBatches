@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useRouter } from "next/navigation";
-import { Button } from "./DemoComponents";
-import { useAddFrame, useMiniKit } from "@coinbase/onchainkit/minikit";
-import { useCallback, useMemo, useState } from "react";
-import { Plus, Check, LogIn, LogOut } from "@geist-ui/icons";
-import { Book } from "@geist-ui/icons";
-import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { useRouter } from 'next/navigation';
+import { Button } from './DemoComponents';
+import { useAddFrame, useMiniKit } from '@coinbase/onchainkit/minikit';
+import { useCallback, useMemo, useState } from 'react';
+import { Plus, Check, Book, LogIn, LogOut } from '@geist-ui/icons';
+import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { coinbaseWallet } from 'wagmi/connectors';
 
 export default function Header() {
   const router = useRouter();
@@ -14,7 +14,7 @@ export default function Header() {
   const addFrame = useAddFrame();
   const [frameAdded, setFrameAdded] = useState(false);
   const { address } = useAccount();
-  const { connect, connectors } = useConnect();
+  const { connect } = useConnect();
   const { disconnect } = useDisconnect();
 
   const handleAddFrame = useCallback(async () => {
@@ -49,22 +49,17 @@ export default function Header() {
     return null;
   }, [context, frameAdded, handleAddFrame]);
 
-  // Find Coinbase Wallet connector
-  const coinbaseConnector = connectors.find(
-    (connector) => connector.id === "coinbaseWalletSDK"
-  );
-
   return (
     <header className="flex items-center h-11 bg-black text-white px-4">
       <div className="flex items-center space-x-2">
         <button
-          onClick={() => router.push("/")}
+          onClick={() => router.push('/')}
           className="text-sm tracking-[0.1em] text-[#ffffff]"
         >
           BayBatches
         </button>
         <button
-          onClick={() => router.push("/about")}
+          onClick={() => router.push('/about')}
           className="text-sm tracking-[0.1em] text-[#ffffff]"
         >
           <Book className="w-4 h-4 text-[#ffffff]" />
@@ -73,27 +68,20 @@ export default function Header() {
       <div className="ml-auto flex items-center space-x-2">
         {saveFrameButton}
         {address ? (
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
             onClick={() => disconnect()}
-            className="text-[#ffffff] p-4"
-            icon={<LogOut className="w-4 h-4 text-[#ffffff]" />}
-          />
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() =>
-              coinbaseConnector
-                ? connect({ connector: coinbaseConnector })
-                : console.error("Coinbase Wallet connector not found")
-            }
-            className="text-[#ffffff] p-4"
-            icon={<LogIn className="w-4 h-4 text-[#ffffff]" />}
+            className="text-sm tracking-[0.1em] text-[#ffffff]"
           >
-            Connect Wallet
-          </Button>
+            <LogOut className="w-4 h-4 text-[#ffffff]" />
+          </button>
+        ) : (
+          <button
+            onClick={() => connect({ connector: coinbaseWallet({ appName: 'BayBatches' }) })}
+            className="flex items-center text-sm tracking-[0.1em] text-[#ffffff]"
+          >
+            <LogIn className="w-4 h-4 text-[#ffffff] mr-2" />
+            connect
+          </button>
         )}
       </div>
     </header>
