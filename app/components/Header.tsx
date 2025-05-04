@@ -7,7 +7,6 @@ import { useCallback, useMemo, useState } from "react";
 import { Plus, Check, LogIn, LogOut } from "@geist-ui/icons";
 import { Book } from "@geist-ui/icons";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
-import { coinbaseWallet } from "wagmi/connectors";
 
 export default function Header() {
   const router = useRouter();
@@ -17,11 +16,6 @@ export default function Header() {
   const { address } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
-
-  // Shorten address for display (e.g., 0x1234...abcd) - not used in UI
-  const shortAddress = address
-    ? `${address.slice(0, 6)}...${address.slice(-4)}`
-    : null;
 
   const handleAddFrame = useCallback(async () => {
     const frameAdded = await addFrame();
