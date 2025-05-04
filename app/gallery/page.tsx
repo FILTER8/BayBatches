@@ -49,7 +49,6 @@ interface GraphData {
 const GLYPH_SET_ADDRESS = '0x94e1f188d72970ce27c890fb9469a5bbb550e2d7';
 const LAUNCHPAD_FEE = '0.0004';
 const ALCHEMY_URL = process.env.NEXT_PUBLIC_ALCHEMY_URL || '';
-const BASE_SEPOLIA_CHAIN_ID = 84532; // Base Sepolia chain ID
 
 const ALL_EDITIONS_QUERY = gql`
   query AllEditions {
@@ -104,7 +103,7 @@ const MemoizedNFTImage = React.memo(NFTImage, (prevProps, nextProps) => {
 });
 
 // BigInt serializer for JSON.stringify
-const serializeBigInt = (key: string, value: any) =>
+const serializeBigInt = (key: string, value: unknown | bigint) =>
   typeof value === 'bigint' ? value.toString() : value;
 
 export default function Gallery() {
