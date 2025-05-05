@@ -62,10 +62,10 @@ async function callWithRetry<T>(
   for (let i = 0; i < retries; i++) {
     try {
       return await fn();
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (i === retries - 1) throw err;
-      const backoff = err.code === 429 ? delayMs * (i + 1) * 2 : delayMs * (i + 1);
-      console.warn(`Retry ${i + 1}/${retries} failed:`, err.message, `Waiting ${backoff}ms`);
+      const backoff = (err as { code?: number }).code === 429 ? delayMs * (i + 1) * 2 : delayMs * (i + 1);
+      console.warn(`Retry ${i + 1}/${retries} failed:`, (err as Error).message, `Waiting ${backoff}ms`);
       await new Promise(resolve => setTimeout(resolve, backoff));
     }
   }
@@ -82,13 +82,12 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 export default function Create() {
-  const { address, isConnected } = useAccount();
+  const { address } = useAccount();
   const [isMounted, setIsMounted] = useState(false);
   const [page, setPage] = useState(1);
 
   useEffect(() => {
     setIsMounted(true);
-    // Use MutationObserver to detect #__next
     const observer = new MutationObserver((mutations, obs) => {
       const appElement = document.getElementById('__next');
       if (appElement) {
@@ -99,7 +98,6 @@ export default function Create() {
     });
     observer.observe(document.body, { childList: true, subtree: true });
 
-    // Fallback: Check after 5 seconds
     const timeout = setTimeout(() => {
       const appElement = document.getElementById('__next');
       if (!appElement) {
@@ -182,10 +180,10 @@ function ColorSelection({ setPage }: { setPage: (page: number) => void }) {
     setPage(2);
   };
 
-return (
-    <div className="max-w-[400px] mx-auto px-2 ">
+  return (
+    <div className="max-w-[400px] mx-auto px-2">
       <h2 className="text-base text-center text-gray-500 mb-2">Select your Colors</h2>
-      <div className="grid grid-cols-3  mb-4">
+      <div className="grid grid-cols-3 mb-4">
         {COLORS.map((rgb, idx) => (
           <div
             key={idx}
@@ -203,16 +201,14 @@ return (
         disabled={selectedColors.length < 2}
         className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 text-base rounded-none disabled:bg-gray-400 transition-colors"
       >
-         <ArrowRightCircle size={16} className="mr-2 inline" />
+        <ArrowRightCircle size={16} className="mr-2 inline" />
       </button>
     </div>
   );
 }
 
-
 function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { writeContractAsync } = useWriteContract();
   const [selectedColors, setSelectedColors] = useState<number[]>([]);
   const [complexity, setComplexity] = useState(1);
   const [glyphs, setGlyphs] = useState<{ id: number; bitmap: bigint }[]>([BLOCK_GLYPH]);
@@ -228,7 +224,7 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
   const [typoCols, setTypoCols] = useState<(number | null)[]>(new Array(7).fill(null));
   const lastTapRef = useRef<{ time: number; idx: number } | null>(null);
   const [selectedGlyph, setSelectedGlyph] = useState<number | null>(null);
-    const [showInfo, setShowInfo] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
 
   const size = 9;
   const scale = 48;
@@ -287,9 +283,9 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
         JSON.stringify(fetchedGlyphs.map((g) => ({ id: g.id, bitmap: g.bitmap.toString() })))
       );
       setGlyphs(fetchedGlyphs.length > 0 ? fetchedGlyphs : fallbackGlyphs.map((g) => ({ id: g.id, bitmap: BigInt(g.bitmap) })));
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Glyphs fetch failed:", error);
-      setError(`Failed to load glyphs from contract: ${error.message || "Unknown error"}. Using fallback glyphs.`);
+      setError(`Failed to load glyphs from contract: ${(error as Error).message || "Unknown error"}. Using fallback glyphs.`);
       setGlyphs(fallbackGlyphs.map((g) => ({ id: g.id, bitmap: BigInt(g.bitmap) })));
     }
   }, [provider]);
@@ -319,7 +315,7 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
         storedFgGlyphs.length === 81 &&
         storedBgColors.length === 81 &&
         storedFgColors.length === 81 &&
-        storedBgGlyphs.every((g: any) => g !== null && g >= 1)
+        storedBgGlyphs.every((g: number) => g !== null && g >= 1)
       ) {
         console.log("Loading stored canvas state:", {
           storedBgGlyphs,
@@ -421,11 +417,6 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
     let typoBgColor: number | undefined;
     let typoColor2: number | undefined;
     let frameColor2: number | undefined;
-    let frameBgColor: number | undefined;
-    let innerBgColor: number | undefined;
-    let typoColor: number | undefined;
-    let graphicColorTop: number | undefined;
-    let graphicColorBottom: number | undefined;
     let glyphColor: number | undefined;
     let bgColor1: number | undefined;
     let bgColor2: number | undefined;
@@ -440,6 +431,9 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
     let innerFgColor1: number | undefined;
     let innerFgColor2: number | undefined;
     let innerFgColor3: number | undefined;
+    let typoColor: number | undefined;
+    let graphicColorTop: number | undefined;
+    let graphicColorBottom: number | undefined;
     let bgColorsRows: number[] | undefined;
     let fgColorsRows: number[] | undefined;
     let blockAssignments: { bgColor: number; fgColor: number }[] | undefined;
@@ -454,8 +448,6 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
       typoBgColor = bgColor;
       typoColor2 = bgColor;
       frameColor2 = frameColor;
-      frameBgColor = bgColor;
-      innerBgColor = bgColor;
     } else if (numColors === 5) {
       glyphColor = getRandomColor();
       bgColor1 = getRandomColor([glyphColor]);
@@ -468,8 +460,6 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
       typoBgColor = bgColor1;
       typoColor2 = glyphColor;
       frameColor2 = glyphColor;
-      frameBgColor = bgColor1;
-      innerBgColor = bgColor1;
     } else if (numColors === 6) {
       bgColor1 = getRandomColor();
       bgColor2 = getRandomColor([bgColor1]);
@@ -483,8 +473,6 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
       typoBgColor = bgColor1;
       typoColor2 = fgColor1;
       frameColor2 = fgColor1;
-      frameBgColor = bgColor1;
-      innerBgColor = bgColor1;
     } else if (numColors === 7) {
       innerBgColor1 = getRandomColor();
       innerBgColor2 = getRandomColor([innerBgColor1]);
@@ -511,8 +499,6 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
       typoBgColor = innerBgColor1;
       typoColor2 = typoColor;
       frameColor2 = typoColor;
-      frameBgColor = innerBgColor1;
-      innerBgColor = innerBgColor1;
     } else if (numColors === 8) {
       typoColor = getRandomColor();
       bgColor = typoColor;
@@ -521,8 +507,6 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
       typoBgColor = typoColor;
       typoColor2 = typoColor;
       frameColor2 = typoColor;
-      frameBgColor = typoColor;
-      innerBgColor = typoColor;
     } else if (numColors >= 9) {
       bgColorsRows = [];
       fgColorsRows = [];
@@ -542,8 +526,6 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
       typoBgColor = bgColorsRows[0];
       typoColor2 = fgColorsRows[0];
       frameColor2 = fgColorsRows[0];
-      frameBgColor = bgColorsRows[0];
-      innerBgColor = bgColorsRows[0];
     } else {
       bgColor = getRandomColor();
       typoColor1 = numColors >= 2 ? getRandomColor([bgColor]) : bgColor;
@@ -551,8 +533,6 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
       typoBgColor = bgColor;
       typoColor2 = typoColor1;
       frameColor2 = frameColor;
-      frameBgColor = bgColor;
-      innerBgColor = bgColor;
     }
 
     const cornerGlyph = availableGlyphs[0] || { id: 1 };
@@ -578,9 +558,9 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
       return variation[letterIdx];
     };
 
-    let variation1 = TYPO_VARIATIONS[Math.floor(Math.random() * TYPO_VARIATIONS.length)];
-    let variation2 = TYPO_VARIATIONS[Math.floor(Math.random() * TYPO_VARIATIONS.length)];
-    let variationBase = TYPO_VARIATIONS_BASE[Math.floor(Math.random() * TYPO_VARIATIONS_BASE.length)];
+    const variation1 = TYPO_VARIATIONS[Math.floor(Math.random() * TYPO_VARIATIONS.length)];
+    const variation2 = TYPO_VARIATIONS[Math.floor(Math.random() * TYPO_VARIATIONS.length)];
+    const variationBase = TYPO_VARIATIONS_BASE[Math.floor(Math.random() * TYPO_VARIATIONS_BASE.length)];
 
     let newTypoRow = typoRow;
     let newTypoRow2 = typoRow2;
@@ -953,7 +933,7 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
     localStorage.setItem("bgColors", JSON.stringify(newBgColors));
     localStorage.setItem("fgColors", JSON.stringify(newFgColors));
     setHasGenerated(true);
-  }, [complexity, glyphCount, selectedColors, stableGlyphs, typoRow, typoRow2, typoCol, typoCols]);
+  }, [complexity, glyphCount, selectedColors, stableGlyphs, typoRow, typoRow2, typoCol, typoCols, isTypoGlyph]);
 
   useEffect(() => {
     const shouldGenerate = localStorage.getItem("shouldGenerateArt") === "true";
@@ -1023,8 +1003,8 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
         newBgColors[i] !== null &&
         newFgColors[i] === newBgColors[i]
       ) {
-        const fgColor = newFgColors[i]!;
-        let nextBgColorIdx = bgColorPool.indexOf(newBgColors[i]!);
+        const bgColor = newBgColors[i]!;
+        let nextBgColorIdx = bgColorPool.indexOf(bgColor);
         let attempts = 0;
         while (newFgColors[i] === newBgColors[i] && attempts < bgColorPool.length) {
           nextBgColorIdx = (nextBgColorIdx + 1) % bgColorPool.length;
@@ -1038,7 +1018,7 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
     setBgColors(newBgColors);
     localStorage.setItem("fgColors", JSON.stringify(newFgColors));
     localStorage.setItem("bgColors", JSON.stringify(newBgColors));
-  }, [hasGenerated, selectedColors, complexity, glyphCount, fgColors, bgColors, fgGlyphs]);
+  }, [hasGenerated, selectedColors, fgColors, bgColors, fgGlyphs]);
 
   const handleCanvasClick = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1198,7 +1178,7 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
     }
   }, [redrawCanvas, selectedColors, hasGenerated]);
 
- return (
+  return (
     <div className="max-w-[400px] mx-auto">
       <div className="flex items-center justify-center mb-2">
         <h2 className="text-base text-center text-gray-500">Generate Your Art</h2>
