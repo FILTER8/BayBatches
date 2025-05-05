@@ -1786,23 +1786,7 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
   if (!isClient) return <div>Loading...</div>;
 
 
-const callWithRetry = async <T>(
-  fn: () => Promise<T>,
-  retries: number = 3,
-  delayMs: number = 1000
-): Promise<T> => {
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await fn();
-    } catch (err: any) {
-      if (i === retries - 1) throw err;
-      const backoff = err.code === 429 ? delayMs * (i + 1) * 2 : delayMs * (i + 1);
-      console.warn(`Retry ${i + 1}/${retries} failed:`, err.message, `Waiting ${backoff}ms`);
-      await new Promise(resolve => setTimeout(resolve, backoff));
-    }
-  }
-  throw new Error('Max retries reached');
-};
+
 
   return (
   <div className="px-4">
