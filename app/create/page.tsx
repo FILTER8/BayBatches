@@ -67,7 +67,7 @@ const callWithRetry = async <T>(
       if (i === retries - 1) throw err;
       const backoff = err.code === 429 ? delayMs * (i + 1) * 2 : delayMs * (i + 1);
       console.warn(`Retry ${i + 1}/${retries} failed:`, err.message, `Waiting ${backoff}ms`);
-      await new Promise((resolve) => setTimeout(resolve, backoff));
+      await new Promise(resolve => setTimeout(resolve, backoff));
     }
   }
   throw new Error("Max retries reached");

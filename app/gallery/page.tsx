@@ -95,13 +95,11 @@ export default function Gallery() {
   const [selectedEdition, setSelectedEdition] = useState<Edition | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [hasFiltered, setHasFiltered] = useState(false);
-  const [showCollectedOverlay, setShowCollectedOverlay] = useState(false);
 
   const { address: walletAddress, isConnected } = useAccount();
   const { switchChain } = useSwitchChain();
   const { writeContract, data: txHash, error: writeError, isPending: isWriting } = useWriteContract();
 
-  // Trigger confetti on successful mint
   useEffect(() => {
     if (txHash) {
       setShowCollectedOverlay(true);
@@ -118,7 +116,6 @@ export default function Gallery() {
     }
   }, [txHash]);
 
-  // Debug config
   useEffect(() => {
     console.log('Wallet Config:', {
       apiKey: process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY,
@@ -142,7 +139,6 @@ export default function Gallery() {
     return { editions: graphData.editions.map((e: Edition) => ({ ...e })) };
   }, [graphData]);
 
-  // Filter editions
   useEffect(() => {
     if (graphLoading || !stableGraphData?.editions || isProcessing || hasFiltered) {
       return;
@@ -211,7 +207,11 @@ export default function Gallery() {
             }, (index + 1) * 200);
             timeouts.push(batchTimeout);
           });
-          return () => timeouts.forEach(clearTimeout);
+          setHasFiltered(true);
+          return () => {
+            timeouts.forEach(clearTimeout);
+            setHasFiltered(false); // Reset hasFiltered on cleanup
+          };
         }
       } catch (error) {
         console.error('Error filtering editions:', error);
