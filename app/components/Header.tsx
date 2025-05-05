@@ -6,14 +6,14 @@ import { useAddFrame, useMiniKit } from '@coinbase/onchainkit/minikit';
 import { useCallback, useMemo, useState } from 'react';
 import { Plus, Check, Book, LogIn, LogOut } from '@geist-ui/icons';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
-import { coinbaseWallet } from 'wagmi/connectors';
+import { ConnectWallet } from "@coinbase/onchainkit/wallet";
 
 export default function Header() {
   const router = useRouter();
   const { context } = useMiniKit();
   const addFrame = useAddFrame();
   const [frameAdded, setFrameAdded] = useState(false);
-  const { address } = useAccount();
+  const { isConnected } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
 
@@ -49,7 +49,7 @@ export default function Header() {
     return null;
   }, [context, frameAdded, handleAddFrame]);
 
-  return (
+   return (
     <header className="flex items-center h-11 bg-black text-white px-4">
       <div className="flex items-center space-x-2">
         <button
@@ -67,7 +67,7 @@ export default function Header() {
       </div>
       <div className="ml-auto flex items-center space-x-2">
         {saveFrameButton}
-        {address ? (
+        {isConnected ? (
           <button
             onClick={() => disconnect()}
             className="text-sm tracking-[0.1em] text-[#ffffff]"
@@ -75,13 +75,7 @@ export default function Header() {
             <LogOut className="w-4 h-4 text-[#ffffff]" />
           </button>
         ) : (
-          <button
-            onClick={() => connect({ connector: coinbaseWallet({ appName: 'BayBatches' }) })}
-            className="flex items-center text-sm tracking-[0.1em] text-[#ffffff]"
-          >
-            <LogIn className="w-4 h-4 text-[#ffffff] mr-2" />
-            connect
-          </button>
+        <ConnectWallet className="wallet-btn flex items-center text-sm tracking-[0.1em] text-[#ffffff] bg-black hover:bg-gray-800 py-2 px-4 transition-colors" />
         )}
       </div>
     </header>

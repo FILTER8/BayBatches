@@ -4,22 +4,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery } from '@apollo/client';
 import { gql } from '@apollo/client';
 import { ethers } from 'ethers';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionStatus,
-  TransactionStatusAction,
-  TransactionStatusLabel,
-  TransactionToast,
-  TransactionToastIcon,
-  TransactionToastLabel,
-  TransactionToastAction,
-  TransactionError,
-  TransactionResponse,
-} from '@coinbase/onchainkit/transaction';
-import { useAccount, useConnect, useChainId } from 'wagmi';
-import { coinbaseWallet } from 'wagmi/connectors';
-import { LogIn } from '@geist-ui/icons';
+import confetti from 'canvas-confetti';
+import { useAccount, useSwitchChain, useWriteContract } from 'wagmi';
 import Header from '../components/Header';
 import NFTImage from '../components/NFTImage';
 import MintbayEditionAbi from '../contracts/MintbayEdition.json';
@@ -53,7 +39,7 @@ const ALCHEMY_URL = process.env.NEXT_PUBLIC_ALCHEMY_URL || '';
 const ALL_EDITIONS_QUERY = gql`
   query AllEditions {
     editions(
-      first: 20
+      first: 30
       skip: 0
       orderBy: createdAt
       orderDirection: desc
@@ -115,25 +101,48 @@ export default function Gallery() {
   const [hasFiltered, setHasFiltered] = useState(false);
   const [showCollectedOverlay, setShowCollectedOverlay] = useState(false);
 
-  const { address: walletAddress } = useAccount();
-  const chainId = useChainId();
-  const { connect } = useConnect();
+  const { address: walletAddress, isConnected } = useAccount();
+  const { switchChain } = useSwitchChain();
+  const { writeContract, data: txHash, error: writeError, isPending: isWriting } = useWriteContract();
+
+  // Trigger confetti on successful mint
+  useEffect(() => {
+    if (txHash) {
+      setShowCollectedOverlay(true);
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#ff0000', '#00ff00', '#0000ff', '#ff69b4', '#ffd700'],
+        disableForReducedMotion: true,
+      });
+      setTimeout(() => {
+        setShowCollectedOverlay(false);
+      }, 3000);
+    }
+  }, [txHash]);
 
   // Debug config
   useEffect(() => {
     console.log('Wallet Config:', {
       apiKey: process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY,
-      chainId,
       walletAddress,
     });
-  }, [walletAddress, chainId]);
+  }, [walletAddress]);
 
-  const { data: graphData, loading: graphLoading, error: graphError } = useQuery<GraphData>(ALL_EDITIONS_QUERY, {
-    fetchPolicy: 'network-only',
+  const { data: graphData, loading: graphLoading, error: graphError, startPolling, stopPolling } = useQuery<GraphData>(ALL_EDITIONS_QUERY, {
+    fetchPolicy: 'cache-and-network',
+    pollInterval: 60000,
   });
+
+  useEffect(() => {
+    startPolling(60000);
+    return () => stopPolling();
+  }, [startPolling, stopPolling]);
 
   const stableGraphData = useMemo(() => {
     if (!graphData?.editions) return null;
+    console.log('GraphQL query completed at:', new Date().toISOString());
     return { editions: graphData.editions.map((e: Edition) => ({ ...e })) };
   }, [graphData]);
 
@@ -144,12 +153,13 @@ export default function Gallery() {
     }
 
     const filterEditions = async () => {
+      const startTime = performance.now();
       setIsProcessing(true);
       try {
         const filtered: Edition[] = [];
         const processedIds = new Set<string>();
 
-        const glyphAddresses = await Promise.all(
+        const glyphResults = await Promise.allSettled(
           stableGraphData.editions.map(async (edition: Edition) => {
             if (!ethers.isAddress(edition.id)) {
               console.log(`Skipping invalid edition address: ${edition.id}`);
@@ -166,7 +176,12 @@ export default function Gallery() {
           })
         );
 
-        for (const { edition, glyphAddress } of glyphAddresses) {
+        for (const result of glyphResults) {
+          if (result.status === 'rejected') {
+            console.error('Glyph contract fetch failed:', result.reason);
+            continue;
+          }
+          const { edition, glyphAddress } = result.value;
           if (!glyphAddress) continue;
           const editionId = edition.id.toLowerCase();
           if (glyphAddress === GLYPH_SET_ADDRESS.toLowerCase()) {
@@ -188,9 +203,15 @@ export default function Gallery() {
         if (filtered.length > 0) {
           setAllEditions(filtered);
           setVisibleEditions([filtered[0].id]);
+          let batchTimeout: NodeJS.Timeout;
           filtered.slice(1).forEach((edition, index) => {
-            setTimeout(() => {
-              setVisibleEditions((prev) => [...prev, edition.id]);
+            batchTimeout = setTimeout(() => {
+              setVisibleEditions((prev) => {
+                if (!prev.includes(edition.id)) {
+                  return [...prev, edition.id];
+                }
+                return prev;
+              });
             }, (index + 1) * 200);
           });
           setHasFiltered(true);
@@ -200,94 +221,12 @@ export default function Gallery() {
         setErrorMessage('Failed to load editions.');
       } finally {
         setIsProcessing(false);
+        console.log('Edition filtering completed in:', `${(performance.now() - startTime).toFixed(2)}ms`);
       }
     };
 
     filterEditions();
   }, [stableGraphData, graphLoading, isProcessing, hasFiltered]);
-
-  // Mint transaction
-  const getMintCall = useCallback(
-    async (edition: Edition) => {
-      if (!walletAddress || !ethers.isAddress(walletAddress) || !provider) {
-        console.log('Invalid mint call: walletAddress=', walletAddress, 'provider=', !!provider);
-        return [];
-      }
-
-      console.log('Generating mint call for edition:', edition.id, 'wallet:', walletAddress);
-      const baseCostEther = edition.isFreeMint ? '0' : ethers.formatEther(edition.price);
-      const feeCostEther = LAUNCHPAD_FEE;
-      const totalValueWei = ethers.parseEther((Number(baseCostEther) + Number(feeCostEther)).toString());
-
-      // Encode collectBatch call
-      let data: `0x${string}` = '0x';
-      try {
-        const contractInterface = new ethers.Interface(MintbayEditionAbi.abi);
-        data = contractInterface.encodeFunctionData('collectBatch', [BigInt(1)]) as `0x${string}`;
-        console.log('Encoded data:', data);
-      } catch (error) {
-        console.error('Failed to encode collectBatch call:', error);
-        return [];
-      }
-
-      // Estimate gas
-      let gasLimit = BigInt(200000); // Default gas limit
-      try {
-        const contract = new ethers.Contract(edition.id, MintbayEditionAbi.abi, provider);
-        const gasEstimate = await contract.collectBatch.estimateGas(BigInt(1), { value: totalValueWei });
-        gasLimit = gasEstimate * BigInt(12) / BigInt(10); // Add 20% buffer
-        console.log('Estimated gas limit:', gasLimit.toString());
-      } catch (error) {
-        console.error('Gas estimation failed:', error);
-      }
-
-      const call = [
-        {
-          to: edition.id as `0x${string}`,
-          data,
-          value: totalValueWei,
-        },
-      ];
-      console.log('Mint call:', JSON.stringify(call, serializeBigInt, 2));
-      return call;
-    },
-    [walletAddress]
-  );
-
-  const handleMintSuccess = useCallback(
-    async (response: TransactionResponse, edition: Edition) => {
-      console.log('Mint success:', response);
-      const transactionHash = response.transactionReceipts[0].transactionHash;
-      setErrorMessage(null);
-      setShowCollectedOverlay(true);
-      setTimeout(() => {
-        setShowCollectedOverlay(false);
-        setSelectedEdition(null);
-      }, 3000);
-      alert(`Mint Successful! You minted ${edition.name}! Tx: ${transactionHash}`);
-    },
-    []
-  );
-
-  const handleMintError = useCallback((error: TransactionError) => {
-    console.error('Transaction error:', error);
-    console.error('Full error details:', JSON.stringify(error, null, 2));
-    let message = 'Transaction failed!';
-    if (error.message.includes('NotWhitelisted')) {
-      message = 'You need a token from a whitelisted contract to mint!';
-    } else if (error.message.includes('InsufficientPayment')) {
-      message = 'Insufficient ETH sent for minting!';
-    } else if (error.message.includes('Exceeds max batch size')) {
-      message = 'Cannot mint more than one NFT at a time.';
-    } else if (error.message.includes('Exceeds max mint')) {
-      message = 'You have reached the maximum mint limit for this wallet.';
-    } else if (error.message.includes('chain')) {
-      message = 'Please ensure your wallet is connected to Base Sepolia.';
-    } else if (error.message.includes('gas')) {
-      message = 'Gas estimation failed. Please try again.';
-    }
-    setErrorMessage(message);
-  }, []);
 
   const filteredEditions = useMemo(() => allEditions, [allEditions]);
   const isLoading = graphLoading || isProcessing;
@@ -330,49 +269,71 @@ export default function Gallery() {
             <p className="text-sm mb-4">
               Edition: {isLoading ? 'Loading...' : `${Number(selectedEdition.totalSupply)}/${Number(selectedEdition.editionSize) || 'Open Edition'}`}
             </p>
-            {walletAddress && ethers.isAddress(walletAddress) ? (
-              <Transaction
-                calls={getMintCall(selectedEdition)}
-                onSuccess={(response) => handleMintSuccess(response, selectedEdition)}
-                onError={handleMintError}
-              >
-                <TransactionButton
-                  className={`w-full max-w-md py-2 px-4 text-sm tracking-[0.1em] text-[#ffffff] bg-green-500 border-radius-0 disabled:bg-gray-400`}
+            {isConnected ? (
+              <>
+                <button
+                  onClick={async () => {
+                    if (!isConnected) {
+                      alert("Please connect your wallet first to collect an NFT.");
+                      return;
+                    }
+                    try {
+                      console.log("Switching to Base Sepolia...");
+                      await switchChain({ chainId: 84532 });
+                      console.log("Chain switched, preparing transaction...");
+                      const baseCost = selectedEdition.isFreeMint ? 0 : Number(ethers.formatEther(selectedEdition.price));
+                      const totalCost = baseCost + Number(LAUNCHPAD_FEE);
+                      const totalCostWei = BigInt(Math.round(totalCost * 1e18));
+                      console.log("Total cost (wei):", totalCostWei.toString());
+                      console.log("Minting to contract:", selectedEdition.id);
+                      console.log("Wallet address:", walletAddress);
+                      await writeContract({
+                        address: selectedEdition.id as `0x${string}`,
+                        abi: MintbayEditionAbi.abi,
+                        functionName: "collectBatch",
+                        args: [BigInt(1)],
+                        value: totalCostWei,
+                      });
+                      console.log("Transaction sent, awaiting confirmation...");
+                    } catch (error) {
+                      console.error("Error in handleCollect:", error);
+                    }
+                  }}
+                  className={`w-full max-w-md py-2 px-4 text-sm tracking-[0.1em] text-[#ffffff] bg-green-500 hover:bg-green-600 border-radius-0 disabled:bg-gray-400`}
                   disabled={
                     selectedEdition.paused ||
                     Number(selectedEdition.totalSupply) >= Number(selectedEdition.editionSize) ||
-                    Number(selectedEdition.editionSize) === 0
+                    Number(selectedEdition.editionSize) === 0 ||
+                    isWriting
                   }
-                  text={
-                    Number(selectedEdition.totalSupply) >= Number(selectedEdition.editionSize) && Number(selectedEdition.editionSize) > 0
-                      ? 'sold out'
-                      : selectedEdition.paused
-                      ? 'paused'
-                      : selectedEdition.isFreeMint
-                      ? ' collect (0.0004 ETH)'
-                      : `collect (${LAUNCHPAD_FEE} ETH)`
-                  }
-                />
-                <TransactionStatus>
-                  <TransactionStatusAction />
-                  <TransactionStatusLabel />
-                </TransactionStatus>
-                <TransactionToast className="mb-4">
-                  <TransactionToastIcon />
-                  <TransactionToastLabel />
-                  <TransactionToastAction />
-                </TransactionToast>
-              </Transaction>
+                >
+                  {Number(selectedEdition.totalSupply) >= Number(selectedEdition.editionSize) && Number(selectedEdition.editionSize) > 0
+                    ? 'sold out'
+                    : selectedEdition.paused
+                    ? 'paused'
+                    : selectedEdition.isFreeMint
+                    ? `free (${LAUNCHPAD_FEE} ETH)`
+                    : `collect (${LAUNCHPAD_FEE} ETH)`}
+                </button>
+                {isWriting && <p className="text-xs mt-2 text-yellow-500">Minting in progress...</p>}
+                {txHash && (
+                  <p className="text-xs mt-2 text-green-600">
+                    [Collected! Tx:{' '}
+                    <a
+                      href={`https://sepolia.basescan.org/tx/${txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline hover:text-green-800"
+                    >
+                      {txHash.slice(0, 6)}...
+                    </a>]
+                  </p>
+                )}
+                {writeError && <p className="text-xs mt-2 text-red-500">Error: {writeError.message}</p>}
+              </>
             ) : (
-         <button
-  onClick={() => connect({ connector: coinbaseWallet({ appName: 'BayBatches' }) })}
-  className="w-full max-w-md py-2 px-4 flex items-center justify-center text-sm tracking-[0.1em] text-[#ffffff] bg-blue-500 rounded-none"
->
-  <LogIn className="w-4 h-4 text-[#ffffff] mr-2" />
-  connect wallet
-</button>
+              <p className="text-sm text-gray-500">Please connect your wallet to collect.</p>
             )}
-           
             <a
               href={`https://mintbay.co/token/${selectedEdition.id}`}
               target="_blank"
