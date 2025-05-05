@@ -54,11 +54,11 @@ const TYPO_VARIATIONS_BASE = TYPO_VARIATIONS.map((variation) => [
   variation[5], // E
 ]);
 
-const callWithRetry = async <T>(
+async function callWithRetry<T>(
   fn: () => Promise<T>,
   retries: number = 3,
   delayMs: number = 1000
-): Promise<T> => {
+): Promise<T> {
   for (let i = 0; i < retries; i++) {
     try {
       return await fn();
@@ -70,7 +70,7 @@ const callWithRetry = async <T>(
     }
   }
   throw new Error("Max retries reached");
-};
+}
 
 function shuffleArray<T>(array: T[]): T[] {
   const shuffled = [...array];
