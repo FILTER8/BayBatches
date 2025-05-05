@@ -4,8 +4,8 @@ import { useRouter } from 'next/navigation';
 import { Button } from './DemoComponents';
 import { useAddFrame, useMiniKit } from '@coinbase/onchainkit/minikit';
 import { useCallback, useMemo, useState } from 'react';
-import { Plus, Check, Book, LogIn, LogOut } from '@geist-ui/icons';
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { Plus, Check, Book, LogOut } from '@geist-ui/icons';
+import { useAccount, useDisconnect } from 'wagmi';
 import { ConnectWallet } from "@coinbase/onchainkit/wallet";
 
 export default function Header() {
@@ -14,7 +14,6 @@ export default function Header() {
   const addFrame = useAddFrame();
   const [frameAdded, setFrameAdded] = useState(false);
   const { isConnected } = useAccount();
-  const { connect } = useConnect();
   const { disconnect } = useDisconnect();
 
   const handleAddFrame = useCallback(async () => {

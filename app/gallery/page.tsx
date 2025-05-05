@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@apollo/client';
 import { gql } from '@apollo/client';
 import { ethers } from 'ethers';
@@ -87,10 +87,6 @@ async function getGlyphContractFromEdition(address: string): Promise<string | nu
 const MemoizedNFTImage = React.memo(NFTImage, (prevProps, nextProps) => {
   return prevProps.address === nextProps.address && prevProps.tokenId === nextProps.tokenId && prevProps.alchemyUrl === nextProps.alchemyUrl;
 });
-
-// BigInt serializer for JSON.stringify
-const serializeBigInt = (key: string, value: unknown | bigint) =>
-  typeof value === 'bigint' ? value.toString() : value;
 
 export default function Gallery() {
   const [visibleEditions, setVisibleEditions] = useState<string[]>([]);
@@ -203,9 +199,9 @@ export default function Gallery() {
         if (filtered.length > 0) {
           setAllEditions(filtered);
           setVisibleEditions([filtered[0].id]);
-          let batchTimeout: NodeJS.Timeout;
+          const timeouts: NodeJS.Timeout[] = [];
           filtered.slice(1).forEach((edition, index) => {
-            batchTimeout = setTimeout(() => {
+            const batchTimeout = setTimeout(() => {
               setVisibleEditions((prev) => {
                 if (!prev.includes(edition.id)) {
                   return [...prev, edition.id];
@@ -213,8 +209,9 @@ export default function Gallery() {
                 return prev;
               });
             }, (index + 1) * 200);
+            timeouts.push(batchTimeout);
           });
-          setHasFiltered(true);
+          return () => timeouts.forEach(clearTimeout);
         }
       } catch (error) {
         console.error('Error filtering editions:', error);

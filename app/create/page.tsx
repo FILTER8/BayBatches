@@ -1828,7 +1828,7 @@ const callWithRetry = async <T>(
         <input
           type="text"
           value={symbol}
-          onChange={(e) => setSymbol(e.target.value)}
+          onChange={(e) => setName(e.target.value)}
           placeholder="BBART"
           className="w-full border border-gray-300 p-2 rounded-sm placeholder-gray-400"
           disabled={isCreating}
