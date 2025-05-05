@@ -1554,9 +1554,8 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
           ).catch((err) => {
             throw new Error('Gas estimation failed: ' + err.message);
           });
-         
 
- const gasWithBuffer = (gasEstimate * BigInt(120)) / BigInt(100);
+          const gasWithBuffer = (gasEstimate * BigInt(120)) / BigInt(100);
 
           let maxFeePerGas, maxPriorityFeePerGas;
           try {
@@ -1647,7 +1646,9 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
           }
         }
       };
-      triggerPng();
+      setTimeout(() => {
+        triggerPng();
+      }, 5000); // 5-second delay to match mini-editor.tsx
     }
   }, [artReceipt, editionAddress, isClient]);
 
