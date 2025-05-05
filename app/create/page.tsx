@@ -54,7 +54,6 @@ const TYPO_VARIATIONS_BASE = TYPO_VARIATIONS.map((variation) => [
   variation[5], // E
 ]);
 
-
 const callWithRetry = async <T>(
   fn: () => Promise<T>,
   retries: number = 3,
@@ -81,7 +80,6 @@ function shuffleArray<T>(array: T[]): T[] {
   }
   return shuffled;
 }
-
 
 export default function Create() {
   const { address, isConnected } = useAccount();
