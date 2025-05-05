@@ -1287,7 +1287,8 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
 function MetadataDeployment({ setPage, address }: { setPage: (page: number) => void; address: string }) {
   const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient({ chainId: baseSepolia.id });
-  const { connect, connectors } = useConnect();
+  const { isConnected } = useAccount();
+  const { connectors } = useConnect();
   const [name, setName] = useState('BaseBatch');
   const [symbol, setSymbol] = useState('BBART');
   const [description, setDescription] = useState('This Artwork was made in a shared moment of creation Minted during BayBatches on Base');
@@ -1298,7 +1299,7 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
   const [artTxHash, setArtTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>('');
-  const [manualReceipt, setManualReceipt] = useState<ethers.TransactionReceipt | null>(null);
+  const [manualReceipt, setManualReceipt] = useState<any>(null);
   const [isClient, setIsClient] = useState(false);
   const ALCHEMY_URL = process.env.NEXT_PUBLIC_ALCHEMY_URL || '';
 
@@ -1354,17 +1355,17 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
       console.log('Manually fetching receipt for txHash:', txHash);
       const fetchReceipt = async (attempt = 1, maxAttempts = 5) => {
         try {
-          let fetchedReceipt = await callWithRetry(() => provider.getTransactionReceipt(txHash!));
-          if (fetchedReceipt) {
-            console.log('Manually fetched receipt (ethers):', fetchedReceipt);
-            setManualReceipt(fetchedReceipt);
+          let manualReceipt = await callWithRetry(() => provider.getTransactionReceipt(txHash));
+          if (manualReceipt) {
+            console.log('Manually fetched receipt (ethers):', manualReceipt);
+            setManualReceipt(manualReceipt);
             return;
           }
           if (publicClient) {
-            fetchedReceipt = await callWithRetry(() => publicClient.getTransactionReceipt({ hash: txHash as `0x${string}` }));
-            console.log('Manually fetched receipt (wagmi):', fetchedReceipt);
-            if (fetchedReceipt) {
-              setManualReceipt(fetchedReceipt);
+            manualReceipt = await callWithRetry(() => publicClient.getTransactionReceipt({ hash: txHash as `0x${string}` }));
+            console.log('Manually fetched receipt (wagmi):', manualReceipt);
+            if (manualReceipt) {
+              setManualReceipt(manualReceipt);
               return;
             }
           }
@@ -1375,7 +1376,7 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
           } else {
             console.error('Failed to fetch receipt after max attempts');
           }
-        } catch (err: unknown) {
+        } catch (err) {
           console.error('Failed to fetch receipt:', err);
           if (attempt < maxAttempts) {
             console.log(`Receipt fetch failed, retrying (${attempt}/${maxAttempts})...`);
@@ -1388,7 +1389,7 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
       };
       fetchReceipt();
     }
-  }, [txHash, provider, publicClient, receipt, manualReceipt]);
+  }, [txHash, provider, publicClient, receipt]);
 
   useEffect(() => {
     const activeReceipt = receipt || manualReceipt;
@@ -1398,6 +1399,7 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
       editionAddress,
       address,
       editionSize,
+      writeContractAsync: !!writeContractAsync,
       provider: !!provider,
     });
     if (activeReceipt && !editionAddress && txHash) {
@@ -1423,10 +1425,10 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
         try {
           console.log('Starting setBaseArt for edition:', newEdition);
           setStatusMessage('Step 2/2: Setting artwork...');
-          const bgGlyphsRaw = JSON.parse(localStorage.getItem('bgGlyphs') || '[]') as (number | null)[];
-          const fgGlyphsRaw = JSON.parse(localStorage.getItem('fgGlyphs') || '[]') as (number | null)[];
-          const bgColorsRaw = JSON.parse(localStorage.getItem('bgColors') || '[]') as (number | null)[];
-          const fgColorsRaw = JSON.parse(localStorage.getItem('fgColors') || '[]') as (number | null)[];
+          const bgGlyphsRaw = JSON.parse(localStorage.getItem('bgGlyphs') || '[]');
+          const fgGlyphsRaw = JSON.parse(localStorage.getItem('fgGlyphs') || '[]');
+          const bgColorsRaw = JSON.parse(localStorage.getItem('bgColors') || '[]');
+          const fgColorsRaw = JSON.parse(localStorage.getItem('fgColors') || '[]');
 
           console.log('Raw localStorage data:', {
             bgGlyphsRaw,
@@ -1437,10 +1439,10 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
             fgGlyphsLength: fgGlyphsRaw.length,
             bgColorsLength: bgColorsRaw.length,
             fgColorsLength: fgColorsRaw.length,
-            bgGlyphsValid: bgGlyphsRaw.every((g) => typeof g === 'number' && g >= 1),
-            fgGlyphsValid: fgGlyphsRaw.every((g) => g === null || (typeof g === 'number' && g >= 1)),
-            bgColorsValid: bgColorsRaw.every((c) => typeof c === 'number' && c >= 1 && c <= COLORS.length),
-            fgColorsValid: fgColorsRaw.every((c) => c === null || (typeof c === 'number' && c >= 0 && c <= COLORS.length)),
+            bgGlyphsValid: bgGlyphsRaw.every((g: any) => typeof g === 'number' && g >= 1),
+            fgGlyphsValid: fgGlyphsRaw.every((g: any) => g === null || (typeof g === 'number' && g >= 1)),
+            bgColorsValid: bgColorsRaw.every((c: any) => typeof c === 'number' && c >= 1 && c <= COLORS.length),
+            fgColorsValid: fgColorsRaw.every((c: any) => c === null || (typeof c === 'number' && c >= 0 && c <= COLORS.length)),
           });
 
           if (
@@ -1452,19 +1454,19 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
             fgGlyphsRaw.length !== 81 ||
             bgColorsRaw.length !== 81 ||
             fgColorsRaw.length !== 81 ||
-            !bgGlyphsRaw.every((g) => typeof g === 'number' && g >= 1) ||
-            !bgColorsRaw.every((c) => typeof c === 'number' && c >= 1 && c <= COLORS.length) ||
-            !fgGlyphsRaw.every((g) => g === null || (typeof g === 'number' && g >= 1)) ||
-            !fgColorsRaw.every((c) => c === null || (typeof c === 'number' && c >= 0 && c <= COLORS.length))
+            !bgGlyphsRaw.every((g: any) => typeof g === 'number' && g >= 1) ||
+            !bgColorsRaw.every((c: any) => typeof c === 'number' && c >= 1 && c <= COLORS.length) ||
+            !fgGlyphsRaw.every((g: any) => g === null || (typeof g === 'number' && g >= 1)) ||
+            !fgColorsRaw.every((c: any) => c === null || (typeof c === 'number' && c >= 0 && c <= COLORS.length))
           ) {
             throw new Error('Invalid or missing canvas state in localStorage');
           }
 
-          const bgGlyphs = bgGlyphsRaw.map((g) => g!);
-          const fgGlyphs = fgGlyphsRaw.map((g) => g ?? 0);
+          const bgGlyphs = bgGlyphsRaw.map((g: number) => g);
+          const fgGlyphs = fgGlyphsRaw.map((g: number | null) => g ?? 0);
 
           const usedColorIndices = new Set<number>(
-            [...bgColorsRaw, ...fgColorsRaw].filter((c): c is number => c !== null && c > 0)
+            [...bgColorsRaw, ...fgColorsRaw].filter((c) => c !== null && c > 0)
           );
           const usedColors: number[] = [];
           const colorMap: { [oldIdx: number]: number } = {};
@@ -1475,10 +1477,10 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
             usedColors.push(...COLORS[oldIdx - 1]);
           });
 
-          const remappedBgColors = bgColorsRaw.map((c) =>
+          const remappedBgColors = bgColorsRaw.map((c: number | null) =>
             c !== null && colorMap[c] ? colorMap[c] : 0
           );
-          const remappedFgColors = fgColorsRaw.map((c) =>
+          const remappedFgColors = fgColorsRaw.map((c: number | null) =>
             c !== null && colorMap[c] ? colorMap[c] : 0
           );
 
@@ -1530,12 +1532,12 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
               { from: address }
             )
           ).catch((err) => {
-            throw new Error('Gas estimation failed: ' + (err as Error).message);
+            throw new Error('Gas estimation failed: ' + err.message);
           });
 
           const gasWithBuffer = (gasEstimate * BigInt(120)) / BigInt(100);
 
-          let maxFeePerGas: bigint, maxPriorityFeePerGas: bigint;
+          let maxFeePerGas, maxPriorityFeePerGas;
           try {
             const gasFeeData = await callWithRetry(() => provider.getFeeData());
             maxFeePerGas = gasFeeData.maxFeePerGas
@@ -1544,7 +1546,7 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
             maxPriorityFeePerGas = gasFeeData.maxPriorityFeePerGas
               ? (gasFeeData.maxPriorityFeePerGas * BigInt(150)) / BigInt(100)
               : BigInt('2000000000'); // Fallback: 2 Gwei
-          } catch (err: unknown) {
+          } catch (err) {
             console.error('Failed to fetch gas fee data for setBaseArt:', err);
             if (publicClient) {
               const gasFeeData = await callWithRetry(() => publicClient.getFeeData());
@@ -1569,11 +1571,11 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
               maxPriorityFeePerGas,
             })
           ).catch(err => {
-            throw new Error('setBaseArt transaction failed: ' + (err as Error).message);
+            throw new Error('setBaseArt transaction failed: ' + err.message);
           });
           console.log('setBaseArt txHash:', artTx);
           setArtTxHash(artTx);
-        } catch (error: unknown) {
+        } catch (error: any) {
           console.error('Set base art failed:', error);
           setError('Edition created at ' + newEdition + ', but artwork not set. Call setBaseArt manually.');
           setIsCreating(false);
@@ -1583,7 +1585,7 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
 
       setBaseArt();
     }
-  }, [receipt, manualReceipt, txHash, writeContractAsync, address, editionSize, provider, publicClient, editionAddress]);
+  }, [receipt, manualReceipt, txHash, writeContractAsync, address, editionSize, provider, publicClient]);
 
   useEffect(() => {
     if (artReceipt && editionAddress && isClient) {
@@ -1608,7 +1610,7 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
             setIsCreating(false);
             setStatusMessage('');
           }, 2000);
-        } catch (err: unknown) {
+        } catch (err: any) {
           console.error(`PNG trigger error for ${editionAddress} (attempt ${attempt}/${maxAttempts}):`, err);
           if (attempt < maxAttempts) {
             console.log(`Retrying PNG generation (${attempt}/${maxAttempts})...`);
@@ -1631,9 +1633,26 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
   }, [artReceipt, editionAddress, isClient]);
 
   const createEdition = async () => {
-    if (!connectors.length) {
-      console.error('No wallet connectors available');
-      setError('No wallet connectors available. Please try again.');
+    if (!isConnected) {
+      // Trigger wallet connection
+      try {
+        const walletButton = document.querySelector('.wallet-btn');
+        if (walletButton) {
+          (walletButton as HTMLElement).click();
+        } else {
+          // Fallback to wagmi connect
+          const connector = connectors[0]; // Use the first available connector
+          if (connector) {
+            await connect({ connector });
+          } else {
+            throw new Error('No wallet connectors available');
+          }
+        }
+      } catch (err) {
+        console.error('Failed to trigger wallet connection:', err);
+        setError('Failed to connect wallet. Please try again.');
+        return;
+      }
       return;
     }
 
@@ -1678,11 +1697,11 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
           { from: address, value: BigInt('500000000000000') }
         )
       ).catch((err) => {
-        throw new Error('Gas estimation failed: ' + (err as Error).message);
+        throw new Error('Gas estimation failed: ' + err.message);
       });
       const gasWithBuffer = (gasEstimate * BigInt(120)) / BigInt(100);
 
-      let maxFeePerGas: bigint, maxPriorityFeePerGas: bigint;
+      let maxFeePerGas, maxPriorityFeePerGas;
       try {
         const gasFeeData = await callWithRetry(() => provider.getFeeData());
         maxFeePerGas = gasFeeData.maxFeePerGas
@@ -1691,7 +1710,7 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
         maxPriorityFeePerGas = gasFeeData.maxPriorityFeePerGas
           ? (gasFeeData.maxPriorityFeePerGas * BigInt(150)) / BigInt(100)
           : BigInt('2000000000'); // Fallback: 2 Gwei
-      } catch (err: unknown) {
+      } catch (err) {
         console.error('Failed to fetch gas fee data for createEdition:', err);
         if (publicClient) {
           const gasFeeData = await callWithRetry(() => publicClient.getFeeData());
@@ -1719,9 +1738,9 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
       console.log('createEdition txHash:', createTx);
       setTxHash(createTx);
       setStatusMessage('Step 1/2: Creating edition...');
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error('Create edition failed:', error);
-      setError('Failed to create edition: ' + ((error as Error).message || 'Unknown error'));
+      setError('Failed to create edition: ' + (error.message || 'Unknown error'));
       setIsCreating(false);
       setStatusMessage('');
     }
@@ -1746,152 +1765,159 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
 
   if (!isClient) return <div>Loading...</div>;
 
+
+
+
   return (
-    <div className="px-4">
-      <div className="flex items-center justify-center mb-2">
-        <h2 className="text-base text-center text-gray-500">Finalize Your Edition</h2>
+  <div className="px-4">
+  <div className="flex items-center justify-center mb-2">
+    <h2 className="text-base text-center text-gray-500">Finalize Your Edition</h2>
+  </div>
+  {!editionAddress ? (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-bold mb-1">Name</label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="BaseBatch"
+          className="w-full border border-gray-300 p-2 rounded-sm placeholder-gray-400"
+          disabled={isCreating}
+        />
       </div>
-      {!editionAddress ? (
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-bold mb-1">Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="BaseBatch"
-              className="w-full border border-gray-300 p-2 rounded-sm placeholder-gray-400"
-              disabled={isCreating}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-bold mb-1">Token Symbol</label>
-            <input
-              type="text"
-              value={symbol}
-              onChange={(e) => setSymbol(e.target.value)}
-              placeholder="BBART"
-              className="w-full border border-gray-300 p-2 rounded-sm placeholder-gray-400"
-              disabled={isCreating}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-bold mb-1">Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="This Artwork was made in a shared moment of creation Minted during BayBatches on Base"
-              className="w-full border border-gray-300 p-2 rounded-sm h-20 placeholder-gray-400"
-              disabled={isCreating}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-bold mb-1">Edition Size: {editionSize}</label>
-            <input
-              type="range"
-              min="1"
-              max="5"
-              value={editionSize}
-              onChange={(e) => setEditionSize(parseInt(e.target.value))}
-              className="w-full"
-              disabled={isCreating}
-            />
-          </div>
-          <p className="text-sm text-gray-500">collect fee 0.0004 (earn 50% from primary sale)</p>
-          {error && (
-            <div className="p-4 bg-red-100 rounded-sm">
-              <p className="text-red-700">{error}</p>
-            </div>
-          )}
-          {statusMessage && (
-            <div className="p-4 bg-gray-100 rounded-sm flex items-center justify-center">
-              <p className="text-gray-700 mr-2">{statusMessage}</p>
-              {(statusMessage.includes('Creating') || statusMessage.includes('Setting') || statusMessage.includes('Finalizing')) && (
-                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500"></div>
-              )}
-            </div>
-          )}
-          <div className="space-y-2">
-            <button
-              onClick={createEdition}
-              disabled={isCreating || !name.trim() || !symbol.trim() || !description.trim() || editionSize < 1 || editionSize > 5}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 text-base rounded-none disabled:bg-gray-400 transition-colors"
-            >
-              Mint (0.0005)
-            </button>
-            <button
-              onClick={() => setPage(2)}
-              className="w-full bg-gray-300 hover:bg-gray-400 text-black py-2 text-base rounded-none transition-colors"
-              disabled={isCreating}
-            >
-              <ArrowLeftCircle size={16} className="mr-2 inline" />
-              Back
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <p className="text-sm">Edition created at: {editionAddress}</p>
-          {txHash && (
-            <p className="text-sm text-green-600">
-              Creation Tx:{' '}
-              <a
-                href={`https://sepolia.basescan.org/tx/${txHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline hover:text-green-800"
-              >
-                {txHash.slice(0, 6)}...
-              </a>
-            </p>
-          )}
-          {artTxHash && (
-            <p className="text-sm text-green-600">
-              Artwork Tx:{' '}
-              <a
-                href={`https://sepolia.basescan.org/tx/${artTxHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline hover:text-green-800"
-              >
-                {artTxHash.slice(0, 6)}...
-              </a>
-            </p>
-          )}
-          <div className="flex justify-center">
-            <NFTImage
-              address={editionAddress}
-              tokenId={1}
-              onImageLoad={() => console.log("NFT image loaded")}
-              alchemyUrl={ALCHEMY_URL}
-            />
-          </div>
-          <button
-            onClick={shareToFarcaster}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-sm transition-colors"
-          >
-            Share to Farcaster
-          </button>
-          <button
-            onClick={() => {
-              localStorage.removeItem('selectedColors');
-              localStorage.removeItem('bgGlyphs');
-              localStorage.removeItem('fgGlyphs');
-              localStorage.removeItem('bgColors');
-              localStorage.removeItem('fgColors');
-              localStorage.removeItem('typoRow');
-              localStorage.removeItem('typoRow2');
-              localStorage.removeItem('typoCol');
-              localStorage.removeItem('typoCols');
-              setPage(1);
-            }}
-            className="w-full bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-sm transition-colors"
-            disabled={isCreating}
-          >
-            Create Another
-          </button>
+      <div>
+        <label className="block text-sm font-bold mb-1">Token Symbol</label>
+        <input
+          type="text"
+          value={symbol}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="BBART"
+          className="w-full border border-gray-300 p-2 rounded-sm placeholder-gray-400"
+          disabled={isCreating}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-bold mb-1">Description</label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="This Artwork was made in a shared moment of creation Minted during BayBatches on Base"
+          className="w-full border border-gray-300 p-2 rounded-sm h-20 placeholder-gray-400"
+          disabled={isCreating}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-bold mb-1">Edition Size: {editionSize}</label>
+        <input
+          type="range"
+          min="1"
+          max="5"
+          value={editionSize}
+          onChange={(e) => setEditionSize(parseInt(e.target.value))}
+          className="w-full"
+          disabled={isCreating}
+        />
+      </div>
+      <p className="text-sm text-gray-500">collect fee 0.0004 (earn 50% from primary sale)</p>
+      {error && (
+        <div className="p-4 bg-red-100 rounded-sm">
+          <p className="text-red-700">{error}</p>
         </div>
       )}
+      {statusMessage && (
+        <div className="p-4 bg-gray-100 rounded-sm flex items-center justify-center">
+          <p className="text-gray-700 mr-2">{statusMessage}</p>
+          {(statusMessage.includes('Creating') || statusMessage.includes('Setting') || statusMessage.includes('Finalizing')) && (
+            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500"></div>
+          )}
+        </div>
+      )}
+      <div className="space-y-2">
+        <button
+          onClick={createEdition}
+          disabled={isCreating || !name.trim() || !symbol.trim() || !description.trim() || editionSize < 1 || editionSize > 5}
+          className={`w-full ${
+            isConnected
+              ? "bg-blue-500 hover:bg-blue-600"
+              : "bg-gray-500 hover:bg-gray-600"
+          } text-white py-2 text-base rounded-none disabled:bg-gray-400 transition-colors`}
+        >
+          Mint (0.0005)
+        </button>
+        <button
+          onClick={() => setPage(2)}
+          className="w-full bg-gray-300 hover:bg-gray-400 text-black py-2 text-base rounded-none transition-colors"
+          disabled={isCreating}
+        >
+          <ArrowLeftCircle size={16} className="mr-2 inline" />
+          Back
+        </button>
+      </div>
     </div>
+  ) : (
+    <div className="space-y-4">
+      <p className="text-sm">Edition created at: {editionAddress}</p>
+      {txHash && (
+        <p className="text-sm text-green-600">
+          Creation Tx:{' '}
+          <a
+            href={`https://sepolia.basescan.org/tx/${txHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-green-800"
+          >
+            {txHash.slice(0, 6)}...
+          </a>
+        </p>
+      )}
+      {artTxHash && (
+        <p className="text-sm text-green-600">
+          Artwork Tx:{' '}
+          <a
+            href={`https://sepolia.basescan.org/tx/${artTxHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-green-800"
+          >
+            {artTxHash.slice(0, 6)}...
+          </a>
+        </p>
+      )}
+      <div className="flex justify-center">
+        <NFTImage
+          address={editionAddress}
+          tokenId={1}
+          onImageLoad={() => console.log("NFT image loaded")}
+          alchemyUrl={ALCHEMY_URL}
+        />
+      </div>
+      <button
+        onClick={shareToFarcaster}
+        className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-sm transition-colors"
+      >
+        Share to Farcaster
+      </button>
+      <button
+        onClick={() => {
+          localStorage.removeItem('selectedColors');
+          localStorage.removeItem('bgGlyphs');
+          localStorage.removeItem('fgGlyphs');
+          localStorage.removeItem('bgColors');
+          localStorage.removeItem('fgColors');
+          localStorage.removeItem('typoRow');
+          localStorage.removeItem('typoRow2');
+          localStorage.removeItem('typoCol');
+          localStorage.removeItem('typoCols');
+          setPage(1);
+        }}
+        className="w-full bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-sm transition-colors"
+        disabled={isCreating}
+      >
+        Create Another
+      </button>
+    </div>
+  )}
+</div>
   );
 }
