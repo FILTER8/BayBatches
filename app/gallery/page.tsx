@@ -95,27 +95,31 @@ export default function Gallery() {
   const [selectedEdition, setSelectedEdition] = useState<Edition | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [hasFiltered, setHasFiltered] = useState(false);
+  const [showCollectedOverlay, setShowCollectedOverlay] = useState(false);
 
   const { address: walletAddress, isConnected } = useAccount();
   const { switchChain } = useSwitchChain();
   const { writeContract, data: txHash, error: writeError, isPending: isWriting } = useWriteContract();
 
-  useEffect(() => {
-    if (txHash) {
-      setShowCollectedOverlay(true);
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#ff0000', '#00ff00', '#0000ff', '#ff69b4', '#ffd700'],
-        disableForReducedMotion: true,
-      });
-      setTimeout(() => {
-        setShowCollectedOverlay(false);
-      }, 3000);
-    }
-  }, [txHash]);
+  // Trigger confetti on successful mint
+useEffect(() => {
+  if (txHash) {
+    setShowCollectedOverlay(true);
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#ff0000', '#00ff00', '#0000ff', '#ff69b4', '#ffd700'],
+      disableForReducedMotion: true,
+    });
+    const timer = setTimeout(() => {
+      setShowCollectedOverlay(false);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }
+}, [txHash, setShowCollectedOverlay]);
 
+  // Debug config
   useEffect(() => {
     console.log('Wallet Config:', {
       apiKey: process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY,
@@ -139,6 +143,7 @@ export default function Gallery() {
     return { editions: graphData.editions.map((e: Edition) => ({ ...e })) };
   }, [graphData]);
 
+  // Filter editions
   useEffect(() => {
     if (graphLoading || !stableGraphData?.editions || isProcessing || hasFiltered) {
       return;
@@ -207,11 +212,7 @@ export default function Gallery() {
             }, (index + 1) * 200);
             timeouts.push(batchTimeout);
           });
-          setHasFiltered(true);
-          return () => {
-            timeouts.forEach(clearTimeout);
-            setHasFiltered(false); // Reset hasFiltered on cleanup
-          };
+          return () => timeouts.forEach(clearTimeout);
         }
       } catch (error) {
         console.error('Error filtering editions:', error);
