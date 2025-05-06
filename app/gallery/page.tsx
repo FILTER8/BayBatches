@@ -94,7 +94,7 @@ export default function Gallery() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedEdition, setSelectedEdition] = useState<Edition | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [hasFiltered, setHasFiltered] = useState(false);
+const hasFiltered = false;
   const [showCollectedOverlay, setShowCollectedOverlay] = useState(false);
 
   const { address: walletAddress, isConnected } = useAccount();
