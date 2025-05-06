@@ -1593,26 +1593,27 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
   }, [receipt, manualReceipt, txHash, writeContractAsync, address, editionSize, provider, publicClient, editionAddress, setError, setIsCreating, setStatusMessage]);
 
   const createEdition = async () => {
-    if (!isConnected) {
-      try {
-        const walletButton = document.querySelector('.wallet-btn');
-        if (walletButton) {
-          (walletButton as HTMLElement).click();
-        } else {
-          const connector = connectors[0];
-          if (connector) {
-            await connect({ connector });
-          } else {
-            throw new Error('No wallet connectors available');
-          }
-        }
-      } catch (err: Error) {
-        console.error('Failed to trigger wallet connection:', err);
-        setError('Failed to connect wallet. Please try again.');
-        return;
+  if (!isConnected) {
+  try {
+    const walletButton = document.querySelector('.wallet-btn');
+    if (walletButton) {
+      (walletButton as HTMLElement).click();
+    } else {
+      const connector = connectors[0];
+      if (connector) {
+        await connect({ connector });
+      } else {
+        throw new Error('No wallet connectors available');
       }
-      return;
     }
+  } catch (err: unknown) {
+    console.error('Failed to trigger wallet connection:', err);
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    setError(`Failed to connect wallet: ${errorMessage}`);
+    return;
+  }
+  return;
+}
 
     if (!address || isCreating) return;
     setIsCreating(true);
