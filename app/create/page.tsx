@@ -499,41 +499,41 @@ const fetchedGlyphs = glyphsData
       typoBgColor = innerBgColor1;
       typoColor2 = typoColor;
       frameColor2 = typoColor;
-    } else if (numColors === 8) {
-      typoColor = getRandomColor();
-      bgColor = typoColor;
-      typoColor1 = typoColor;
-      frameColor = typoColor;
-      typoBgColor = typoColor;
-      typoColor2 = typoColor;
-      frameColor2 = typoColor;
-    } else if (numColors >= 9) {
-      bgColorsRows = [];
-      fgColorsRows = [];
-      const shuffledColors = [...availableColors].sort(() => Math.random() - 0.5);
-      for (let i = 0; i < 9; i++) {
-        bgColorsRows[i] = shuffledColors[i];
-        usedColors.add(shuffledColors[i]);
-      }
-      const remainingColors = shuffledColors.slice(0, 9);
-      for (let i = 0; i < 9; i++) {
-        const availableFgColors = remainingColors.filter((c) => c !== bgColorsRows[i]);
-        fgColorsRows[i] = availableFgColors[Math.floor(Math.random() * availableFgColors.length)] || remainingColors[0];
-      }
-      bgColor = bgColorsRows[0];
-      typoColor1 = fgColorsRows[0];
-      frameColor = fgColorsRows[0];
-      typoBgColor = bgColorsRows[0];
-      typoColor2 = fgColorsRows[0];
-      frameColor2 = fgColorsRows[0];
-    } else {
-      bgColor = getRandomColor();
-      typoColor1 = numColors >= 2 ? getRandomColor([bgColor]) : bgColor;
-      frameColor = numColors >= 3 ? getRandomColor([bgColor, typoColor1]) : typoColor1;
-      typoBgColor = bgColor;
-      typoColor2 = typoColor1;
-      frameColor2 = frameColor;
-    }
+} else if (numColors === 8) {
+  typoColor = getRandomColor();
+  bgColor = typoColor;
+  typoColor1 = typoColor;
+  frameColor = typoColor;
+  typoBgColor = typoColor;
+  typoColor2 = typoColor;
+  frameColor2 = typoColor;
+} else if (numColors >= 9) {
+  const bgColorsRows: number[] = [];
+  const fgColorsRows: number[] = [];
+  const shuffledColors = [...availableColors].sort(() => Math.random() - 0.5);
+  for (let i = 0; i < 9; i++) {
+    bgColorsRows[i] = shuffledColors[i];
+    usedColors.add(shuffledColors[i]);
+  }
+  const remainingColors = shuffledColors.slice(0, 9);
+  for (let i = 0; i < 9; i++) {
+    const availableFgColors = remainingColors.filter((c) => c !== bgColorsRows[i]);
+    fgColorsRows[i] = availableFgColors[Math.floor(Math.random() * availableFgColors.length)] || remainingColors[0];
+  }
+  bgColor = bgColorsRows[0];
+  typoColor1 = fgColorsRows[0];
+  frameColor = fgColorsRows[0];
+  typoBgColor = bgColorsRows[0];
+  typoColor2 = fgColorsRows[0];
+  frameColor2 = fgColorsRows[0];
+} else {
+  bgColor = getRandomColor();
+  typoColor1 = numColors >= 2 ? getRandomColor([bgColor]) : bgColor;
+  frameColor = numColors >= 3 ? getRandomColor([bgColor, typoColor1]) : typoColor1;
+  typoBgColor = bgColor;
+  typoColor2 = typoColor1;
+  frameColor2 = frameColor;
+}
 
     const cornerGlyph = availableGlyphs[0] || { id: 1 };
     const edgeGlyphs = availableGlyphs.length > 1 ? availableGlyphs.slice(1) : [cornerGlyph];
@@ -1584,7 +1584,7 @@ const setBaseArt = async () => {
 
       setBaseArt();
     }
-  }, [receipt, manualReceipt, txHash, writeContractAsync, address, editionSize, provider, publicClient]);
+  }, [receipt, manualReceipt, txHash, writeContractAsync, address, provider, publicClient]);
 
 
 
