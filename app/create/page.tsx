@@ -280,13 +280,13 @@ const fetchedGlyphs = glyphsData
 
       localStorage.setItem(
         "cachedGlyphs",
-        JSON.stringify(fetchedGlyphs.map((g) => ({ id: g.id, bitmap: g.bitmap.toString() })))
+       JSON.stringify(fetchedGlyphs.map((g: { id: number; bitmap: bigint }) => ({ id: g.id, bitmap: g.bitmap.toString() })))
       );
       setGlyphs(fetchedGlyphs.length > 0 ? fetchedGlyphs : fallbackGlyphs.map((g) => ({ id: g.id, bitmap: BigInt(g.bitmap) })));
     } catch (error: unknown) {
       console.error("Glyphs fetch failed:", error);
       setError(`Failed to load glyphs from contract: ${(error as Error).message || "Unknown error"}. Using fallback glyphs.`);
-      setGlyphs(fallbackGlyphs.map((g) => ({ id: g.id, bitmap: BigInt(g.bitmap) })));
+      setGlyphs(fallbackGlyphs.map((g: { id: number; bitmap: string }) => ({ id: g.id, bitmap: BigInt(g.bitmap) })));
     }
   }, [provider]);
 
@@ -1586,50 +1586,7 @@ const setBaseArt = async () => {
     }
   }, [receipt, manualReceipt, txHash, writeContractAsync, address, editionSize, provider, publicClient]);
 
-useEffect(() => {
-  if (artReceipt && editionAddress && isClient) {
-    console.log('artReceipt received, triggering PNG generation for:', editionAddress);
-    setStatusMessage('Finalizing... Generating PNG...');
-    const triggerPng = async (attempt = 1, maxAttempts = 3) => {
-      try {
-        const response = await callWithRetry(() =>
-          fetch('/api/trigger-png', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ editionAddress }),
-          })
-        );
-        const responseData = await response.json();
-        console.log('PNG API response:', response.status, responseData);
-        if (!response.ok) {
-          throw new Error(`PNG generation failed: ${responseData.error || 'Unknown error'}`);
-        }
-        setStatusMessage('Edition created successfully!');
-        setTimeout(() => {
-          setIsCreating(false);
-          setStatusMessage('');
-        }, 2000);
-      } catch (err) {
-        console.error(`PNG trigger error for ${editionAddress} (attempt ${attempt}/${maxAttempts}):`, err);
-        if (attempt < maxAttempts) {
-          console.log(`Retrying PNG generation (${attempt}/${maxAttempts})...`);
-          await new Promise(resolve => setTimeout(resolve, 3000));
-          await triggerPng(attempt + 1, maxAttempts);
-        } else {
-          console.warn('PNG generation failed, relying on NFTImage for display');
-          setStatusMessage('Edition created successfully!');
-          setTimeout(() => {
-            setIsCreating(false);
-            setStatusMessage('');
-          }, 2000);
-        }
-      }
-    };
-    setTimeout(() => {
-      triggerPng();
-    }, 5000);
-  }
-}, [artReceipt, editionAddress, isClient]); // Added editionAddress
+
 
 const createEdition = async () => {
   if (!isConnected) {
