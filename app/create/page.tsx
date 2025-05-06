@@ -1610,7 +1610,7 @@ useEffect(() => {
           setIsCreating(false);
           setStatusMessage('');
         }, 2000);
-      } catch (err: Error) {
+      } catch (err) {
         console.error(`PNG trigger error for ${editionAddress} (attempt ${attempt}/${maxAttempts}):`, err);
         if (attempt < maxAttempts) {
           console.log(`Retrying PNG generation (${attempt}/${maxAttempts})...`);
@@ -1630,7 +1630,7 @@ useEffect(() => {
       triggerPng();
     }, 5000);
   }
-}, [artReceipt, editionAddress, isClient]); // Fix: Ensure editionAddress is included
+}, [artReceipt, editionAddress, isClient]); // Added editionAddress
 
 const createEdition = async () => {
   if (!isConnected) {
@@ -1736,12 +1736,13 @@ const createEdition = async () => {
       console.log('createEdition txHash:', createTx);
       setTxHash(createTx);
       setStatusMessage('Step 1/2: Creating edition...');
-    } catch (error: any) {
-      console.error('Create edition failed:', error);
-      setError('Failed to create edition: ' + (error.message || 'Unknown error'));
-      setIsCreating(false);
-      setStatusMessage('');
-    }
+} catch (error: unknown) {
+  console.error('Create edition failed:', error);
+  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  setError(`Failed to create edition: ${errorMessage}`);
+  setIsCreating(false);
+  setStatusMessage('');
+}
   };
 
   const shareToFarcaster = () => {
