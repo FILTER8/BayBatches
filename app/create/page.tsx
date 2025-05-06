@@ -1579,12 +1579,13 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
             setIsCreating(false);
             setStatusMessage('');
           }, 2000);
-        } catch (error: Error) {
-          console.error('Create edition failed:', error);
-          setError('Failed to create edition: ' + (error.message || 'Unknown error'));
-          setIsCreating(false);
-          setStatusMessage('');
-        }
+      } catch (error: unknown) {
+  console.error('Create edition failed:', error);
+  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  setError(`Failed to create edition: ${errorMessage}`);
+  setIsCreating(false);
+  setStatusMessage('');
+}
       };
 
       setBaseArt();
