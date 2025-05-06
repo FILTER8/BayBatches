@@ -12,6 +12,7 @@ import editionAbi from "../contracts/MintbayEdition.json";
 import customGlyphsArtifact from "../contracts/CustomGlyphs.json";
 import fallbackGlyphs from "../data/glyphsFallback.json";
 import { Info, RefreshCw, Droplet, ArrowLeftCircle, ArrowRightCircle } from "@geist-ui/icons";
+import { TransactionReceipt } from 'ethers';
 
 const customGlyphsAbi = customGlyphsArtifact.abi;
 
@@ -1299,7 +1300,7 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
   const [artTxHash, setArtTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>('');
-  const [manualReceipt, setManualReceipt] = useState<any>(null);
+  const [manualReceipt, setManualReceipt] = useState<TransactionReceipt | null>(null);
   const [isClient, setIsClient] = useState(false);
   const ALCHEMY_URL = process.env.NEXT_PUBLIC_ALCHEMY_URL || '';
 
@@ -1389,7 +1390,7 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
       };
       fetchReceipt();
     }
-  }, [txHash, provider, publicClient, receipt]);
+  }, [txHash, manualReceipt, receipt, provider, publicClient]);
 
   useEffect(() => {
     const activeReceipt = receipt || manualReceipt;
@@ -1420,47 +1421,46 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
 
       const newEdition = '0x' + editionCreatedLog.topics[2].slice(-40);
       setEditionAddress(newEdition);
+const setBaseArt = async () => {
+  try {
+    console.log('Starting setBaseArt for edition:', newEdition);
+    setStatusMessage('Step 2/2: Setting artwork...');
+    const bgGlyphsRaw = JSON.parse(localStorage.getItem('bgGlyphs') || '[]');
+    const fgGlyphsRaw = JSON.parse(localStorage.getItem('fgGlyphs') || '[]');
+    const bgColorsRaw = JSON.parse(localStorage.getItem('bgColors') || '[]');
+    const fgColorsRaw = JSON.parse(localStorage.getItem('fgColors') || '[]');
 
-      const setBaseArt = async () => {
-        try {
-          console.log('Starting setBaseArt for edition:', newEdition);
-          setStatusMessage('Step 2/2: Setting artwork...');
-          const bgGlyphsRaw = JSON.parse(localStorage.getItem('bgGlyphs') || '[]');
-          const fgGlyphsRaw = JSON.parse(localStorage.getItem('fgGlyphs') || '[]');
-          const bgColorsRaw = JSON.parse(localStorage.getItem('bgColors') || '[]');
-          const fgColorsRaw = JSON.parse(localStorage.getItem('fgColors') || '[]');
+    console.log('Raw localStorage data:', {
+      bgGlyphsRaw,
+      fgGlyphsRaw,
+      bgColorsRaw,
+      fgColorsRaw,
+      bgGlyphsLength: bgGlyphsRaw.length,
+      fgGlyphsLength: fgGlyphsRaw.length,
+      bgColorsLength: bgColorsRaw.length,
+      fgColorsLength: fgColorsRaw.length,
+      bgGlyphsValid: bgGlyphsRaw.every((g: number) => typeof g === 'number' && g >= 1),
+      fgGlyphsValid: fgGlyphsRaw.every((g: number | null) => g === null || (typeof g === 'number' && g >= 1)),
+      bgColorsValid: bgColorsRaw.every((c: number) => typeof c === 'number' && c >= 1 && c <= COLORS.length),
+      fgColorsValid: fgColorsRaw.every((c: number | null) => c === null || (typeof c === 'number' && c >= 0 && c <= COLORS.length)),
+    });
 
-          console.log('Raw localStorage data:', {
-            bgGlyphsRaw,
-            fgGlyphsRaw,
-            bgColorsRaw,
-            fgColorsRaw,
-            bgGlyphsLength: bgGlyphsRaw.length,
-            fgGlyphsLength: fgGlyphsRaw.length,
-            bgColorsLength: bgColorsRaw.length,
-            fgColorsLength: fgColorsRaw.length,
-            bgGlyphsValid: bgGlyphsRaw.every((g: any) => typeof g === 'number' && g >= 1),
-            fgGlyphsValid: fgGlyphsRaw.every((g: any) => g === null || (typeof g === 'number' && g >= 1)),
-            bgColorsValid: bgColorsRaw.every((c: any) => typeof c === 'number' && c >= 1 && c <= COLORS.length),
-            fgColorsValid: fgColorsRaw.every((c: any) => c === null || (typeof c === 'number' && c >= 0 && c <= COLORS.length)),
-          });
-
-          if (
-            !Array.isArray(bgGlyphsRaw) ||
-            !Array.isArray(fgGlyphsRaw) ||
-            !Array.isArray(bgColorsRaw) ||
-            !Array.isArray(fgColorsRaw) ||
-            bgGlyphsRaw.length !== 81 ||
-            fgGlyphsRaw.length !== 81 ||
-            bgColorsRaw.length !== 81 ||
-            fgColorsRaw.length !== 81 ||
-            !bgGlyphsRaw.every((g: any) => typeof g === 'number' && g >= 1) ||
-            !bgColorsRaw.every((c: any) => typeof c === 'number' && c >= 1 && c <= COLORS.length) ||
-            !fgGlyphsRaw.every((g: any) => g === null || (typeof g === 'number' && g >= 1)) ||
-            !fgColorsRaw.every((c: any) => c === null || (typeof c === 'number' && c >= 0 && c <= COLORS.length))
-          ) {
-            throw new Error('Invalid or missing canvas state in localStorage');
-          }
+    if (
+      !Array.isArray(bgGlyphsRaw) ||
+      !Array.isArray(fgGlyphsRaw) ||
+      !Array.isArray(bgColorsRaw) ||
+      !Array.isArray(fgColorsRaw) ||
+      bgGlyphsRaw.length !== 81 ||
+      fgGlyphsRaw.length !== 81 ||
+      bgColorsRaw.length !== 81 ||
+      fgColorsRaw.length !== 81 ||
+      !bgGlyphsRaw.every((g: number) => typeof g === 'number' && g >= 1) ||
+      !bgColorsRaw.every((c: number) => typeof c === 'number' && c >= 1 && c <= COLORS.length) ||
+      !fgGlyphsRaw.every((g: number | null) => g === null || (typeof g === 'number' && g >= 1)) ||
+      !fgColorsRaw.every((c: number | null) => c === null || (typeof c === 'number' && c >= 0 && c <= COLORS.length))
+    ) {
+      throw new Error('Invalid or missing canvas state in localStorage');
+    }
 
           const bgGlyphs = bgGlyphsRaw.map((g: number) => g);
           const fgGlyphs = fgGlyphsRaw.map((g: number | null) => g ?? 0);
@@ -1575,86 +1575,84 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
           });
           console.log('setBaseArt txHash:', artTx);
           setArtTxHash(artTx);
-        } catch (error: any) {
-          console.error('Set base art failed:', error);
-          setError('Edition created at ' + newEdition + ', but artwork not set. Call setBaseArt manually.');
-          setIsCreating(false);
-          setStatusMessage('');
-        }
+} catch (error: Error) {
+    console.error('Create edition failed:', error);
+    setError('Failed to create edition: ' + (error.message || 'Unknown error'));
+    setIsCreating(false);
+    setStatusMessage('');
+  }
       };
 
       setBaseArt();
     }
   }, [receipt, manualReceipt, txHash, writeContractAsync, address, editionSize, provider, publicClient]);
 
-  useEffect(() => {
-    if (artReceipt && editionAddress && isClient) {
-      console.log('artReceipt received, triggering PNG generation for:', editionAddress);
-      setStatusMessage('Finalizing... Generating PNG...');
-      const triggerPng = async (attempt = 1, maxAttempts = 3) => {
-        try {
-          const response = await callWithRetry(() =>
-            fetch('/api/trigger-png', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ editionAddress }),
-            })
-          );
-          const responseData = await response.json();
-          console.log('PNG API response:', response.status, responseData);
-          if (!response.ok) {
-            throw new Error(`PNG generation failed: ${responseData.error || 'Unknown error'}`);
-          }
+ useEffect(() => {
+  if (artReceipt && editionAddress && isClient) {
+    console.log('artReceipt received, triggering PNG generation for:', editionAddress);
+    setStatusMessage('Finalizing... Generating PNG...');
+    const triggerPng = async (attempt = 1, maxAttempts = 3) => {
+      try {
+        const response = await callWithRetry(() =>
+          fetch('/api/trigger-png', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ editionAddress }),
+          })
+        );
+        const responseData = await response.json();
+        console.log('PNG API response:', response.status, responseData);
+        if (!response.ok) {
+          throw new Error(`PNG generation failed: ${responseData.error || 'Unknown error'}`);
+        }
+        setStatusMessage('Edition created successfully!');
+        setTimeout(() => {
+          setIsCreating(false);
+          setStatusMessage('');
+        }, 2000);
+      } catch (err: Error) {
+        console.error(`PNG trigger error for ${editionAddress} (attempt ${attempt}/${maxAttempts}):`, err);
+        if (attempt < maxAttempts) {
+          console.log(`Retrying PNG generation (${attempt}/${maxAttempts})...`);
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          await triggerPng(attempt + 1, maxAttempts);
+        } else {
+          console.warn('PNG generation failed, relying on NFTImage for display');
           setStatusMessage('Edition created successfully!');
           setTimeout(() => {
             setIsCreating(false);
             setStatusMessage('');
           }, 2000);
-        } catch (err: any) {
-          console.error(`PNG trigger error for ${editionAddress} (attempt ${attempt}/${maxAttempts}):`, err);
-          if (attempt < maxAttempts) {
-            console.log(`Retrying PNG generation (${attempt}/${maxAttempts})...`);
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            await triggerPng(attempt + 1, maxAttempts);
-          } else {
-            console.warn('PNG generation failed, relying on NFTImage for display');
-            setStatusMessage('Edition created successfully!');
-            setTimeout(() => {
-              setIsCreating(false);
-              setStatusMessage('');
-            }, 2000);
-          }
         }
-      };
-      setTimeout(() => {
-        triggerPng();
-      }, 5000); // 5-second delay to match mini-editor.tsx
-    }
-  }, [artReceipt, editionAddress, isClient]);
+      }
+    };
+    setTimeout(() => {
+      triggerPng();
+    }, 5000);
+  }
+}, [artReceipt, editionAddress, isClient]); // Added editionAddress
 
   const createEdition = async () => {
-    if (!isConnected) {
-      // Trigger wallet connection
-      try {
-        const walletButton = document.querySelector('.wallet-btn');
-        if (walletButton) {
-          (walletButton as HTMLElement).click();
-        } else {
-          // Fallback to wagmi connect
-          const connector = connectors[0]; // Use the first available connector
-          if (connector) {
-            await connect({ connector });
-          } else {
-            throw new Error('No wallet connectors available');
-          }
-        }
-      } catch (err) {
-        console.error('Failed to trigger wallet connection:', err);
-        setError('Failed to connect wallet. Please try again.');
-        return;
+ if (!isConnected) {
+  try {
+    const walletButton = document.querySelector('.wallet-btn');
+    if (walletButton) {
+      (walletButton as HTMLElement).click();
+    } else {
+      const connector = connectors[0];
+      if (connector) {
+        await connect({ connector });
+      } else {
+        throw new Error('No wallet connectors available');
       }
-      return;
     }
+  } catch (err: Error) {
+    console.error('Failed to trigger wallet connection:', err);
+    setError('Failed to connect wallet. Please try again.');
+    return;
+  }
+  return;
+}
 
     if (!address || isCreating) return;
     setIsCreating(true);
@@ -1786,17 +1784,17 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
           disabled={isCreating}
         />
       </div>
-      <div>
-        <label className="block text-sm font-bold mb-1">Token Symbol</label>
-        <input
-          type="text"
-          value={symbol}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="BBART"
-          className="w-full border border-gray-300 p-2 rounded-sm placeholder-gray-400"
-          disabled={isCreating}
-        />
-      </div>
+  <div>
+  <label className="block text-sm font-bold mb-1">Token Symbol</label>
+  <input
+    type="text"
+    value={symbol}
+    onChange={(e) => setSymbol(e.target.value)} // Fix: Changed from setName to setSymbol
+    placeholder="BBART"
+    className="w-full border border-gray-300 p-2 rounded-sm placeholder-gray-400"
+    disabled={isCreating}
+  />
+</div>
       <div>
         <label className="block text-sm font-bold mb-1">Description</label>
         <textarea
