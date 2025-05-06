@@ -272,12 +272,11 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
         throw new Error("No contract deployed at the specified address");
       }
 
-      const glyphsData = await callWithRetry(() => contract.getAllGlyphs());
-      const fetchedGlyphs = glyphsData
-        .slice(0, 79)
-        .map((bitmap: bigint, id: number) => ({ id, bitmap }))
-        .filter((g) => g.id >= 1);
-      console.log("Fetched glyphs:", fetchedGlyphs.map((g) => ({ id: g.id, bitmap: g.bitmap.toString() })));
+const glyphsData = await callWithRetry(() => contract.getAllGlyphs());
+const fetchedGlyphs = glyphsData
+  .slice(0, 79)
+  .map((bitmap: bigint, id: number) => ({ id, bitmap }))
+  .filter((g: { id: number; bitmap: bigint }) => g.id >= 1);
 
       localStorage.setItem(
         "cachedGlyphs",
@@ -1653,7 +1652,7 @@ const createEdition = async () => {
     }
     return;
   }
-  
+
     if (!address || isCreating) return;
     setIsCreating(true);
     setError(null);
