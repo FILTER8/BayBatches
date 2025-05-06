@@ -1300,7 +1300,7 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
   const [artTxHash, setArtTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>('');
-  const [manualReceipt, setManualReceipt] = useState<EthersTransactionReceipt | WagmiTransactionReceipt | null>(null);
+  const [manualReceipt, setManualReceipt] = useState<ethers.TransactionReceipt | WagmiTransactionReceipt | null>(null);
   const [isClient, setIsClient] = useState(false);
   const ALCHEMY_URL = process.env.NEXT_PUBLIC_ALCHEMY_URL || '';
 
@@ -1356,7 +1356,7 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
       console.log('Manually fetching receipt for txHash:', txHash);
       const fetchReceipt = async (attempt = 1, maxAttempts = 5) => {
         try {
-          let manualReceipt: EthersTransactionReceipt | WagmiTransactionReceipt | null = await callWithRetry(() => provider.getTransactionReceipt(txHash));
+          let manualReceipt: ethers.TransactionReceipt | WagmiTransactionReceipt | null = await callWithRetry(() => provider.getTransactionReceipt(txHash));
           if (manualReceipt) {
             console.log('Manually fetched receipt (ethers):', manualReceipt);
             setManualReceipt(manualReceipt);
@@ -1549,7 +1549,7 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
           } catch (err) {
             console.error('Failed to fetch gas fee data for setBaseArt:', err);
             if (publicClient) {
-              const gasFeeData = await callWithRetry(() => publicClient.getFeeData());
+              const gasFeeData = await callWithRetry(() => publicClient.estimateFeesPerGas());
               maxFeePerGas = gasFeeData.maxFeePerGas
                 ? (gasFeeData.maxFeePerGas * BigInt(150)) / BigInt(100)
                 : BigInt('50000000000');
@@ -1671,7 +1671,7 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
       } catch (err) {
         console.error('Failed to fetch gas fee data for createEdition:', err);
         if (publicClient) {
-          const gasFeeData = await callWithRetry(() => publicClient.getFeeData());
+          const gasFeeData = await callWithRetry(() => publicClient.estimateFeesPerGas());
           maxFeePerGas = gasFeeData.maxFeePerGas
             ? (gasFeeData.maxFeePerGas * BigInt(150)) / BigInt(100)
             : BigInt('50000000000');
