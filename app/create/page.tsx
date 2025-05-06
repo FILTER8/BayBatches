@@ -1630,7 +1630,7 @@ useEffect(() => {
       triggerPng();
     }, 5000);
   }
-}, [artReceipt, editionAddress, isClient]); // Fix: Added editionAddress to dependency array
+}, [artReceipt, editionAddress, isClient]); // Fix: Ensure editionAddress is included
 
 const createEdition = async () => {
   if (!isConnected) {
@@ -1646,14 +1646,14 @@ const createEdition = async () => {
           throw new Error('No wallet connectors available');
         }
       }
-    } catch (err: Error) { // Fix: Changed any to Error
+    } catch (err: Error) { // Fix: Changed from any to Error
       console.error('Failed to trigger wallet connection:', err);
       setError('Failed to connect wallet. Please try again.');
       return;
     }
     return;
   }
-
+  
     if (!address || isCreating) return;
     setIsCreating(true);
     setError(null);
