@@ -1587,7 +1587,7 @@ const setBaseArt = async () => {
     }
   }, [receipt, manualReceipt, txHash, writeContractAsync, address, editionSize, provider, publicClient]);
 
- useEffect(() => {
+useEffect(() => {
   if (artReceipt && editionAddress && isClient) {
     console.log('artReceipt received, triggering PNG generation for:', editionAddress);
     setStatusMessage('Finalizing... Generating PNG...');
@@ -1630,29 +1630,29 @@ const setBaseArt = async () => {
       triggerPng();
     }, 5000);
   }
-}, [artReceipt, editionAddress, isClient]); // Added editionAddress
+}, [artReceipt, editionAddress, isClient]); // Fix: Added editionAddress to dependency array
 
-  const createEdition = async () => {
- if (!isConnected) {
-  try {
-    const walletButton = document.querySelector('.wallet-btn');
-    if (walletButton) {
-      (walletButton as HTMLElement).click();
-    } else {
-      const connector = connectors[0];
-      if (connector) {
-        await connect({ connector });
+const createEdition = async () => {
+  if (!isConnected) {
+    try {
+      const walletButton = document.querySelector('.wallet-btn');
+      if (walletButton) {
+        (walletButton as HTMLElement).click();
       } else {
-        throw new Error('No wallet connectors available');
+        const connector = connectors[0];
+        if (connector) {
+          await connect({ connector });
+        } else {
+          throw new Error('No wallet connectors available');
+        }
       }
+    } catch (err: Error) { // Fix: Changed any to Error
+      console.error('Failed to trigger wallet connection:', err);
+      setError('Failed to connect wallet. Please try again.');
+      return;
     }
-  } catch (err: Error) {
-    console.error('Failed to trigger wallet connection:', err);
-    setError('Failed to connect wallet. Please try again.');
     return;
   }
-  return;
-}
 
     if (!address || isCreating) return;
     setIsCreating(true);
