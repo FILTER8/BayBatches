@@ -1,6 +1,6 @@
 // app/api/profiles/route.ts
 import { NextResponse } from 'next/server';
-import { NeynarAPIClient } from '@neynar/nodejs-sdk';
+import { NeynarAPIClient, Configuration } from '@neynar/nodejs-sdk';
 
 interface UserProfile {
   username: string;
@@ -13,11 +13,16 @@ if (!process.env.NEYNAR_API_KEY) {
   throw new Error('NEYNAR_API_KEY is not defined in environment variables');
 }
 
-const client = new NeynarAPIClient(process.env.NEYNAR_API_KEY, {
-  headers: {
-    'x-neynar-experimental': true,
+const config = new Configuration({
+  apiKey: process.env.NEYNAR_API_KEY,
+  baseOptions: {
+    headers: {
+      'x-neynar-experimental': true,
+    },
   },
 });
+
+const client = new NeynarAPIClient(config);
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -53,7 +58,7 @@ export async function POST(request: Request) {
       acc[user.address.toLowerCase()] = {
         username: user.username || user.address.slice(0, 6),
         display_name: user.display_name || user.username || user.address.slice(0, 6),
-        pfp_url: user.pfp_url || 'https://splashicon.png',
+        pfp_url: user.pfp_url || '/default-avatar.png',
         address: user.address,
       };
       return acc;
