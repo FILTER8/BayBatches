@@ -3,6 +3,7 @@ import {
   NeynarAPIClient,
   Configuration,
   isApiErrorResponse,
+  User as NeynarUser,
 } from '@neynar/nodejs-sdk';
 
 interface UserProfile {
@@ -10,6 +11,15 @@ interface UserProfile {
   display_name: string;
   pfp_url: string;
   address: string;
+}
+
+interface NeynarUserResponse {
+  fid: number;
+  username?: string;
+  display_name?: string;
+  pfp_url?: string;
+  verifications?: string[];
+  address?: string;
 }
 
 if (!process.env.NEYNAR_API_KEY) {
@@ -27,30 +37,35 @@ const config = new Configuration({
 
 const client = new NeynarAPIClient(config);
 
-// ✅ Updated helper to use the correct Neynar endpoint
-async function resolveFidsFromAddresses(addresses: string[]): Promise<Record<string, number>> {
+async function resolveFidsFromAddresses(
+  addresses: string[]
+): Promise<Record<string, number>> {
   try {
-    const response = await fetch('https://api.neynar.com/v2/farcaster/user/bulk-by-address', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'api_key': process.env.NEYNAR_API_KEY!,
-        'x-neynar-experimental': 'true',
-      },
-      body: JSON.stringify({ addresses: addresses.map(addr => addr.toLowerCase()) }),
-    });
+    const response = await fetch(
+      'https://api.neynar.com/v2/farcaster/user/bulk-by-address',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          api_key: process.env.NEYNAR_API_KEY!,
+          'x-neynar-experimental': 'true',
+        },
+        body: JSON.stringify({ addresses: addresses.map((addr) => addr.toLowerCase()) }),
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`Neynar API error: ${response.statusText}`);
     }
 
-const data = await response.json();
-return data.users.reduce((acc: Record<string, UserProfile>, user: any) => {
-  if (user.fid && user.address) {
-    acc[user.address.toLowerCase()] = user.fid;
-  }
-  return acc;
-}, {});
+    const data = await response.json();
+
+    return data.users.reduce((acc: Record<string, number>, user: NeynarUserResponse) => {
+      if (user.fid && user.address) {
+        acc[user.address.toLowerCase()] = user.fid;
+      }
+      return acc;
+    }, {});
   } catch (error) {
     console.error('Failed to resolve FIDs from addresses:', error);
     return {};
@@ -110,7 +125,7 @@ export async function POST(request: Request) {
     const fidMap = await resolveFidsFromAddresses(lowerAddresses);
 
     const fids = lowerAddresses
-      .map(addr => fidMap[addr])
+      .map((addr) => fidMap[addr])
       .filter((fid): fid is number => fid !== undefined);
 
     if (fids.length === 0) {
@@ -120,18 +135,22 @@ export async function POST(request: Request) {
 
     const response = await client.fetchBulkUsers({ fids });
 
-const profiles = response.users.reduce((acc: Record<string, UserProfile>, user) => {
-  const address = user.verifications?.[0]?.toLowerCase() || lowerAddresses.find(addr => fidMap[addr] === user.fid);
-  if (address) {
-    acc[address] = {
-      username: user.username || address.slice(0, 6),
-      display_name: user.display_name || user.username || address.slice(0, 6),
-      pfp_url: user.pfp_url || '/splashicon.png',
-      address,
-    };
-  }
-  return acc;
-}, {});
+    const profiles = response.users.reduce((acc: Record<string, UserProfile>, user: NeynarUser) => {
+      const address =
+        user.verifications?.[0]?.toLowerCase() ||
+        lowerAddresses.find((addr) => fidMap[addr] === user.fid);
+
+      if (address) {
+        acc[address] = {
+          username: user.username || address.slice(0, 6),
+          display_name: user.display_name || user.username || address.slice(0, 6),
+          pfp_url: user.pfp_url || '/splashicon.png',
+          address,
+        };
+      }
+
+      return acc;
+    }, {});
 
     return NextResponse.json(profiles);
   } catch (error) {
