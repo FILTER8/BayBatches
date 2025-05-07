@@ -3,7 +3,6 @@ import {
   NeynarAPIClient,
   Configuration,
   isApiErrorResponse,
-  User,
 } from '@neynar/nodejs-sdk';
 
 interface UserProfile {
@@ -46,7 +45,7 @@ async function resolveFidsFromAddresses(addresses: string[]): Promise<Record<str
     }
 
 const data = await response.json();
-return data.users.reduce((acc: Record<string, number>, user: NeynarResolvedUser) => {
+return data.users.reduce((acc: Record<string, UserProfile>, user) => {
   if (user.fid && user.address) {
     acc[user.address.toLowerCase()] = user.fid;
   }
