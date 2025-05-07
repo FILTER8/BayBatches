@@ -1,4 +1,3 @@
-// app/leaderboard/page.tsx
 'use client';
 
 import { useQuery } from '@apollo/client';
@@ -126,7 +125,7 @@ export default function LeaderboardPage() {
           ) : (
             <div className="mt-2">
               <Leaderboard mostCollected={mostCollected} mostCreated={mostCreated} />
-              <PageFooter />
+              <PageFooter pageName="LEADERBOARD" />
             </div>
           )}
         </Suspense>
