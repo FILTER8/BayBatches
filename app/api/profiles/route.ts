@@ -1,10 +1,6 @@
+// app/api/profiles/route.ts
 import { NextResponse } from 'next/server';
-import {
-  NeynarAPIClient,
-  Configuration,
-  isApiErrorResponse,
-  User as NeynarUser,
-} from '@neynar/nodejs-sdk';
+import { NeynarAPIClient, Configuration, isApiErrorResponse } from '@neynar/nodejs-sdk';
 
 interface UserProfile {
   username: string;
@@ -13,12 +9,14 @@ interface UserProfile {
   address: string;
 }
 
-interface NeynarUserResponse {
+interface NeynarUser {
   fid: number;
-  username?: string;
+  username: string;
   display_name?: string;
   pfp_url?: string;
+  pfp?: { url: string };
   verifications?: string[];
+  custody_address?: string;
   address?: string;
 }
 
@@ -37,30 +35,25 @@ const config = new Configuration({
 
 const client = new NeynarAPIClient(config);
 
-async function resolveFidsFromAddresses(
-  addresses: string[]
-): Promise<Record<string, number>> {
+// Helper to resolve FIDs from addresses
+async function resolveFidsFromAddresses(addresses: string[]): Promise<Record<string, number>> {
   try {
-    const response = await fetch(
-      'https://api.neynar.com/v2/farcaster/user/bulk-by-address',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          api_key: process.env.NEYNAR_API_KEY!,
-          'x-neynar-experimental': 'true',
-        },
-        body: JSON.stringify({ addresses: addresses.map((addr) => addr.toLowerCase()) }),
-      }
-    );
+    const response = await fetch('https://api.neynar.com/v2/user/bulk', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api_key': process.env.NEYNAR_API_KEY!, // Assert defined
+        'x-neynar-experimental': 'true',
+      },
+      body: JSON.stringify({ addresses: addresses.map(addr => addr.toLowerCase()) }),
+    });
 
     if (!response.ok) {
       throw new Error(`Neynar API error: ${response.statusText}`);
     }
 
     const data = await response.json();
-
-    return data.users.reduce((acc: Record<string, number>, user: NeynarUserResponse) => {
+    return data.users.reduce((acc: Record<string, number>, user: NeynarUser) => {
       if (user.fid && user.address) {
         acc[user.address.toLowerCase()] = user.fid;
       }
@@ -81,9 +74,9 @@ export async function GET(request: Request) {
   }
 
   try {
+    // Resolve FID from address
     const fidMap = await resolveFidsFromAddresses([address.toLowerCase()]);
     const fid = fidMap[address.toLowerCase()];
-
     if (!fid) {
       console.warn(`No FID found for address: ${address}`);
       return NextResponse.json(null);
@@ -91,7 +84,6 @@ export async function GET(request: Request) {
 
     const response = await client.fetchBulkUsers({ fids: [fid] });
     const user = response.users[0];
-
     if (!user) {
       console.warn(`No user found for FID: ${fid}`);
       return NextResponse.json(null);
@@ -100,7 +92,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       username: user.username || address.slice(0, 6),
       display_name: user.display_name || user.username || address.slice(0, 6),
-      pfp_url: user.pfp_url || '/splashicon.png',
+      pfp_url: user.pfp_url || '/default-avatar.png',
       address: user.verifications?.[0] || address,
     });
   } catch (error) {
@@ -116,16 +108,15 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const { addresses } = await request.json();
-
     if (!Array.isArray(addresses) || addresses.length === 0) {
       return NextResponse.json({ error: 'Addresses array is required' }, { status: 400 });
     }
 
+    // Resolve FIDs from addresses
     const lowerAddresses = addresses.map((addr: string) => addr.toLowerCase());
     const fidMap = await resolveFidsFromAddresses(lowerAddresses);
-
     const fids = lowerAddresses
-      .map((addr) => fidMap[addr])
+      .map(addr => fidMap[addr])
       .filter((fid): fid is number => fid !== undefined);
 
     if (fids.length === 0) {
@@ -134,23 +125,22 @@ export async function POST(request: Request) {
     }
 
     const response = await client.fetchBulkUsers({ fids });
-
     const profiles = response.users.reduce((acc: Record<string, UserProfile>, user: NeynarUser) => {
-      const address =
-        user.verifications?.[0]?.toLowerCase() ||
-        lowerAddresses.find((addr) => fidMap[addr] === user.fid);
-
+      const address = user.verifications?.[0]?.toLowerCase() || lowerAddresses.find(addr => fidMap[addr] === user.fid);
       if (address) {
         acc[address] = {
           username: user.username || address.slice(0, 6),
           display_name: user.display_name || user.username || address.slice(0, 6),
-          pfp_url: user.pfp_url || '/splashicon.png',
+          pfp_url: user.pfp_url || '/default-avatar.png',
           address,
         };
       }
-
       return acc;
     }, {});
+
+    if (response.users.length === 0) {
+      console.warn(`No profiles found for FIDs: ${fids.join(', ')}`);
+    }
 
     return NextResponse.json(profiles);
   } catch (error) {
