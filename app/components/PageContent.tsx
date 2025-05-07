@@ -18,7 +18,7 @@ export const TitleBar: FC<PageContentProps> = ({ pageName }) => {
     pageName === 'CREATE' ? '#0052ff' :
     pageName === 'GALLERY' ? '#e096b6' :
     pageName === 'ABOUT' ? '#079153' :
-    '#ff5f11';
+    '#ff5f11'; // LEADERBOARD
 
   return (
     <div
@@ -31,7 +31,7 @@ export const TitleBar: FC<PageContentProps> = ({ pageName }) => {
   );
 };
 
-export const PageFooter: FC = () => { // Remove pageName prop
+export const PageFooter: FC<PageContentProps> = () => { // Add PageContentProps
   const openUrl = useOpenUrl();
 
   return (
