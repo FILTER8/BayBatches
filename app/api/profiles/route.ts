@@ -121,20 +121,18 @@ export async function POST(request: Request) {
 
     const response = await client.fetchBulkUsers({ fids });
 
-    const profiles = response.users.reduce((acc: Record<string, UserProfile>, user: User) => {
-      const address = user.verifications?.[0]?.toLowerCase() || lowerAddresses.find(addr => fidMap[addr] === user.fid);
-
-      if (address) {
-        acc[address] = {
-          username: user.username || address.slice(0, 6),
-          display_name: user.display_name || user.username || address.slice(0, 6),
-          pfp_url: user.pfp_url || '/splashicon.png',
-          address,
-        };
-      }
-
-      return acc;
-    }, {});
+const profiles = response.users.reduce((acc: Record<string, UserProfile>, user) => {
+  const address = user.verifications?.[0]?.toLowerCase() || lowerAddresses.find(addr => fidMap[addr] === user.fid);
+  if (address) {
+    acc[address] = {
+      username: user.username || address.slice(0, 6),
+      display_name: user.display_name || user.username || address.slice(0, 6),
+      pfp_url: user.pfp_url || '/splashicon.png',
+      address,
+    };
+  }
+  return acc;
+}, {});
 
     return NextResponse.json(profiles);
   } catch (error) {
