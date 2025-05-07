@@ -45,13 +45,13 @@ async function resolveFidsFromAddresses(addresses: string[]): Promise<Record<str
       throw new Error(`Neynar API error: ${response.statusText}`);
     }
 
-    const data = await response.json();
-    return data.users.reduce((acc: Record<string, number>, user: any) => {
-      if (user.fid && user.address) {
-        acc[user.address.toLowerCase()] = user.fid;
-      }
-      return acc;
-    }, {});
+const data = await response.json();
+return data.users.reduce((acc: Record<string, number>, user: NeynarResolvedUser) => {
+  if (user.fid && user.address) {
+    acc[user.address.toLowerCase()] = user.fid;
+  }
+  return acc;
+}, {});
   } catch (error) {
     console.error('Failed to resolve FIDs from addresses:', error);
     return {};
