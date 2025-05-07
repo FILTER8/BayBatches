@@ -46,8 +46,8 @@ interface Edition {
   id: string;
   glyphContract: string;
   name: string;
-  totalSupply: number;
-  editionSize: number;
+  totalSupply: string;
+  editionSize: string;
   price: string;
   isFreeMint: boolean;
   paused: boolean;
@@ -195,7 +195,14 @@ export function UserProfile({ walletAddress, username, avatarUrl }: UserProfileP
                       className="cursor-pointer"
                       onClick={() =>
                         setSelectedEdition({
-                          ...token.edition,
+                          id: token.edition.id,
+                          glyphContract: token.edition.glyphContract,
+                          name: token.edition.name,
+                          totalSupply: String(token.edition.totalSupply),
+                          editionSize: String(token.edition.editionSize),
+                          price: token.edition.price,
+                          isFreeMint: token.edition.isFreeMint,
+                          paused: token.edition.paused,
                           tokenId: Number(token.tokenId),
                         })
                       }
@@ -223,7 +230,19 @@ export function UserProfile({ walletAddress, username, avatarUrl }: UserProfileP
                   <div
                     key={edition.id}
                     className="cursor-pointer"
-                    onClick={() => setSelectedEdition({ ...edition, tokenId: 1 })}
+                    onClick={() =>
+                      setSelectedEdition({
+                        id: edition.id,
+                        glyphContract: edition.glyphContract,
+                        name: edition.name,
+                        totalSupply: String(edition.totalSupply),
+                        editionSize: String(edition.editionSize),
+                        price: edition.price,
+                        isFreeMint: edition.isFreeMint,
+                        paused: edition.paused,
+                        tokenId: 1,
+                      })
+                    }
                   >
                     <MemoizedNFTImage
                       address={edition.id}
