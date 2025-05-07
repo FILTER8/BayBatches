@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 import { NeynarAPIClient, Configuration } from '@neynar/nodejs-sdk';
 
+interface UserProfile {
+  username: string;
+  display_name: string;
+  pfp_url: string;
+  address: string;
+}
+
 if (!process.env.NEYNAR_API_KEY) {
   throw new Error('NEYNAR_API_KEY is not defined in environment variables');
 }
@@ -43,7 +50,7 @@ export async function POST(request: Request) {
 
     const lowerAddresses = addresses.map((addr: string) => addr.toLowerCase());
     const response = await client.user.fetchUsersByAddress(lowerAddresses);
-    const profiles = response.users.reduce((acc: Record<string, any>, user: any) => {
+    const profiles = response.users.reduce((acc: Record<string, UserProfile>, user: UserProfile) => {
       acc[user.address.toLowerCase()] = {
         username: user.username,
         display_name: user.display_name,

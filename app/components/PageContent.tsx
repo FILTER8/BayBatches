@@ -1,7 +1,7 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { FC } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from './DemoComponents';
 import { Twitter } from '@geist-ui/icons';
 import { useOpenUrl } from '@coinbase/onchainkit/minikit';
