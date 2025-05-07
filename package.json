@@ -14,6 +14,7 @@
     "@farcaster/frame-sdk": "^0.0.37",
     "@farcaster/frame-wagmi-connector": "^0.0.25",
     "@geist-ui/icons": "^1.0.2",
+    "@neynar/nodejs-sdk": "^2.33.1",
     "@tanstack/react-query": "^5",
     "@upstash/redis": "^1.34.4",
     "canvas-confetti": "^1.9.3",
