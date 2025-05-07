@@ -1,6 +1,6 @@
 // app/api/profiles/route.ts
 import { NextResponse } from 'next/server';
-import { NeynarAPIClient, Configuration } from '@neynar/nodejs-sdk';
+import { NeynarAPIClient } from '@neynar/nodejs-sdk';
 
 interface UserProfile {
   username: string;
@@ -13,16 +13,11 @@ if (!process.env.NEYNAR_API_KEY) {
   throw new Error('NEYNAR_API_KEY is not defined in environment variables');
 }
 
-const config = new Configuration({
-  apiKey: process.env.NEYNAR_API_KEY,
-  baseOptions: {
-    headers: {
-      'x-neynar-experimental': true,
-    },
+const client = new NeynarAPIClient(process.env.NEYNAR_API_KEY, {
+  headers: {
+    'x-neynar-experimental': true,
   },
 });
-
-const client = new NeynarAPIClient(config);
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -33,7 +28,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const response = await client.user.fetchUsersByAddress([address.toLowerCase()]);
+    const response = await client.fetchBulkUsersByAddress([address.toLowerCase()]);
     const user = response.users[0] || null;
     if (!user) {
       console.warn(`No user found for address: ${address}`);
@@ -53,12 +48,12 @@ export async function POST(request: Request) {
     }
 
     const lowerAddresses = addresses.map((addr: string) => addr.toLowerCase());
-    const response = await client.user.fetchUsersByAddress(lowerAddresses);
+    const response = await client.fetchBulkUsersByAddress(lowerAddresses);
     const profiles = response.users.reduce((acc: Record<string, UserProfile>, user: UserProfile) => {
       acc[user.address.toLowerCase()] = {
         username: user.username || user.address.slice(0, 6),
         display_name: user.display_name || user.username || user.address.slice(0, 6),
-        pfp_url: user.pfp_url || 'https://default-avatar.png',
+        pfp_url: user.pfp_url || 'https://splashicon.png',
         address: user.address,
       };
       return acc;
