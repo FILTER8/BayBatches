@@ -1,6 +1,6 @@
 // app/api/profiles/route.ts
 import { NextResponse } from 'next/server';
-import { NeynarAPIClient, Configuration, isApiErrorResponse } from '@neynar/nodejs-sdk';
+import { NeynarAPIClient, Configuration, isApiErrorResponse, User } from '@neynar/nodejs-sdk';
 
 interface UserProfile {
   username: string;
@@ -9,15 +9,12 @@ interface UserProfile {
   address: string;
 }
 
-interface NeynarUser {
+interface NeynarBulkUser {
   fid: number;
   username: string;
   display_name: string;
-  pfp_url?: string; // For fetchBulkUsers
-  pfp?: { url: string }; // For /v2/user/bulk
-  verifications: string[];
-  custody_address?: string;
-  address?: string; // For /v2/user/bulk
+  pfp: { url: string };
+  address: string;
 }
 
 if (!process.env.NEYNAR_API_KEY) {
@@ -53,7 +50,7 @@ async function resolveFidsFromAddresses(addresses: string[]): Promise<Record<str
     }
 
     const data = await response.json();
-    return data.users.reduce((acc: Record<string, number>, user: NeynarUser) => {
+    return data.users.reduce((acc: Record<string, number>, user: NeynarBulkUser) => {
       if (user.fid && user.address) {
         acc[user.address.toLowerCase()] = user.fid;
       }
@@ -125,7 +122,7 @@ export async function POST(request: Request) {
     }
 
     const response = await client.fetchBulkUsers({ fids });
-    const profiles = response.users.reduce((acc: Record<string, UserProfile>, user: NeynarUser) => {
+    const profiles = response.users.reduce((acc: Record<string, UserProfile>, user: User) => {
       const address = user.verifications?.[0]?.toLowerCase() || lowerAddresses.find(addr => fidMap[addr] === user.fid);
       if (address) {
         acc[address] = {
