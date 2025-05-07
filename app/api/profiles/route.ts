@@ -45,7 +45,7 @@ async function resolveFidsFromAddresses(addresses: string[]): Promise<Record<str
     }
 
 const data = await response.json();
-return data.users.reduce((acc: Record<string, UserProfile>, user) => {
+return data.users.reduce((acc: Record<string, UserProfile>, user: any) => {
   if (user.fid && user.address) {
     acc[user.address.toLowerCase()] = user.fid;
   }
