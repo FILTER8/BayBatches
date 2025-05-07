@@ -1,3 +1,4 @@
+// app/components/PageContent.tsx
 'use client';
 
 import { FC } from 'react';
@@ -13,12 +14,11 @@ interface PageContentProps {
 export const TitleBar: FC<PageContentProps> = ({ pageName }) => {
   const router = useRouter();
 
-  // Set fixed color for title bar based on page
   const titleBarColor =
     pageName === 'CREATE' ? '#0052ff' :
     pageName === 'GALLERY' ? '#e096b6' :
     pageName === 'ABOUT' ? '#079153' :
-    '#ff5f11'; // LEADERBOARD
+    '#ff5f11';
 
   return (
     <div
@@ -31,7 +31,7 @@ export const TitleBar: FC<PageContentProps> = ({ pageName }) => {
   );
 };
 
-export const PageFooter: FC<PageContentProps> = ({ pageName }) => {
+export const PageFooter: FC = () => { // Remove pageName prop
   const openUrl = useOpenUrl();
 
   return (

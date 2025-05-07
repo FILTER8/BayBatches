@@ -1,3 +1,4 @@
+// app/leaderboard/page.tsx
 'use client';
 
 import { useQuery } from '@apollo/client';
@@ -9,25 +10,48 @@ import { Leaderboard } from '../components/Leaderboard';
 import { LEADERBOARD_QUERY } from '../graphql/queries';
 import { getUserProfiles } from '../lib/neynar';
 
+interface Token {
+  id: string;
+}
+
+interface Edition {
+  id: string;
+}
+
+interface User {
+  id: string;
+  tokensOwned: Token[];
+  editionsCreated: Edition[];
+}
+
+interface Profile {
+  username: string;
+  avatarUrl: string;
+}
+
+interface LeaderboardEntry {
+  walletAddress: string;
+  username: string;
+  avatarUrl: string;
+  tokensOwnedCount: number;
+  editionsCreatedCount: number;
+}
+
 export default function LeaderboardPage() {
-  const { data, loading, error: queryError } = useQuery(LEADERBOARD_QUERY, {
+  const { data, loading, error: queryError } = useQuery<{ users: User[] }>(LEADERBOARD_QUERY, {
     fetchPolicy: 'cache-and-network',
   });
-  const [profiles, setProfiles] = useState<
-    Record<string, { username: string; avatarUrl: string }>
-  >({});
+  const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [profileError, setProfileError] = useState<string | null>(null);
 
   useEffect(() => {
     if (data) {
       console.log('Subgraph data:', JSON.stringify(data, null, 2));
-      const addresses = data?.users
-        ?.filter(
-          (user: any) =>
-            (user.tokensOwned?.length || 0) > 0 ||
-            (user.editionsCreated?.length || 0) > 0
+      const addresses = data.users
+        .filter(
+          (user) => (user.tokensOwned?.length || 0) > 0 || (user.editionsCreated?.length || 0) > 0
         )
-        .map((user: any) => user.id) || [];
+        .map((user) => user.id);
       console.log('Filtered addresses for profiles:', addresses);
       if (addresses.length > 0) {
         getUserProfiles(addresses)
@@ -45,30 +69,30 @@ export default function LeaderboardPage() {
     }
   }, [data]);
 
-  const mostCollected =
+  const mostCollected: LeaderboardEntry[] =
     data?.users
-      ?.filter((user: any) => (user.tokensOwned?.length || 0) > 0)
-      .map((user: any) => ({
+      .filter((user) => (user.tokensOwned?.length || 0) > 0)
+      .map((user) => ({
         walletAddress: user.id,
         username: profiles[user.id]?.username || user.id.slice(0, 6),
         avatarUrl: profiles[user.id]?.avatarUrl || 'https://default-avatar.png',
         tokensOwnedCount: user.tokensOwned?.length || 0,
         editionsCreatedCount: user.editionsCreated?.length || 0,
       }))
-      .sort((a: any, b: any) => b.tokensOwnedCount - a.tokensOwnedCount)
+      .sort((a, b) => b.tokensOwnedCount - a.tokensOwnedCount)
       .slice(0, 10) || [];
 
-  const mostCreated =
+  const mostCreated: LeaderboardEntry[] =
     data?.users
-      ?.filter((user: any) => (user.editionsCreated?.length || 0) > 0)
-      .map((user: any) => ({
+      .filter((user) => (user.editionsCreated?.length || 0) > 0)
+      .map((user) => ({
         walletAddress: user.id,
         username: profiles[user.id]?.username || user.id.slice(0, 6),
         avatarUrl: profiles[user.id]?.avatarUrl || 'https://default-avatar.png',
         tokensOwnedCount: user.tokensOwned?.length || 0,
         editionsCreatedCount: user.editionsCreated?.length || 0,
       }))
-      .sort((a: any, b: any) => b.editionsCreatedCount - a.editionsCreatedCount)
+      .sort((a, b) => b.editionsCreatedCount - a.editionsCreatedCount)
       .slice(0, 10) || [];
 
   console.log('Most Collected:', JSON.stringify(mostCollected, null, 2));
@@ -89,27 +113,23 @@ export default function LeaderboardPage() {
           }
         >
           <TitleBar pageName="LEADERBOARD" />
+          {loading ? (
+            <div className="text-center">Loading...</div>
+          ) : queryError ? (
+            <div className="text-center text-red-500">Error: {queryError.message}</div>
+          ) : profileError ? (
+            <div className="text-center text-red-500">{profileError}</div>
+          ) : !data?.users?.length ? (
+            <div className="text-center text-gray-500">No users found in the subgraph</div>
+          ) : !mostCollected.length && !mostCreated.length ? (
+            <div className="text-center text-gray-500">No users found with tokens or editions</div>
+          ) : (
+            <div className="mt-2">
+              <Leaderboard mostCollected={mostCollected} mostCreated={mostCreated} />
+              <PageFooter />
+            </div>
+          )}
         </Suspense>
-        {loading ? (
-          <div className="text-center">Loading...</div>
-        ) : queryError ? (
-          <div className="text-center text-red-500">Error: {queryError.message}</div>
-        ) : profileError ? (
-          <div className="text-center text-red-500">{profileError}</div>
-        ) : !data?.users?.length ? (
-          <div className="text-center text-gray-500">
-            No users found in the subgraph
-          </div>
-        ) : !mostCollected.length && !mostCreated.length ? (
-          <div className="text-center text-gray-500">
-            No users found with tokens or editions
-          </div>
-        ) : (
-          <div className="mt-2">
-            <Leaderboard mostCollected={mostCollected} mostCreated={mostCreated} />
-            <PageFooter pageName="LEADERBOARD" />
-          </div>
-        )}
       </div>
     </div>
   );

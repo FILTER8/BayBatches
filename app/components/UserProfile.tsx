@@ -1,6 +1,6 @@
+// app/components/UserProfile.tsx
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useQuery } from '@apollo/client';
 import { ethers } from 'ethers';
@@ -8,6 +8,7 @@ import { USER_PROFILE_QUERY } from '../graphql/queries';
 import MemoizedNFTImage from './NFTImage';
 import { TokenDetail } from './TokenDetail';
 import MintbayEditionAbi from '../contracts/MintbayEdition.json';
+import Image from 'next/image'; // Added for avatar
 
 const GLYPH_SET_ADDRESS = '0x94e1f188d72970ce27c890fb9469a5bbb550e2d7';
 const ALCHEMY_URL = process.env.NEXT_PUBLIC_ALCHEMY_URL || '';
@@ -36,6 +37,22 @@ async function getGlyphContractFromEdition(address: string): Promise<string | nu
   }
 }
 
+interface Token {
+  id: string;
+  tokenId: string;
+  edition: {
+    id: string;
+  };
+}
+
+interface Edition {
+  id: string;
+}
+
+interface SelectedEdition extends Edition {
+  tokenId: number;
+}
+
 interface UserProfileProps {
   walletAddress: string;
   username: string;
@@ -43,15 +60,17 @@ interface UserProfileProps {
 }
 
 export function UserProfile({ walletAddress, username, avatarUrl }: UserProfileProps) {
-  const router = useRouter();
   const [tab, setTab] = useState<'collected' | 'created'>('collected');
-  const [selectedEdition, setSelectedEdition] = useState<any | null>(null);
-  const { data, loading, error } = useQuery(USER_PROFILE_QUERY, {
-    variables: { id: walletAddress.toLowerCase() },
-    fetchPolicy: 'cache-and-network',
-  });
-  const [filteredTokens, setFilteredTokens] = useState<any[]>([]);
-  const [filteredEditions, setFilteredEditions] = useState<any[]>([]);
+  const [selectedEdition, setSelectedEdition] = useState<SelectedEdition | null>(null);
+  const { data, loading, error } = useQuery<{ user: { tokensOwned: Token[]; editionsCreated: Edition[] } }>(
+    USER_PROFILE_QUERY,
+    {
+      variables: { id: walletAddress.toLowerCase() },
+      fetchPolicy: 'cache-and-network',
+    }
+  );
+  const [filteredTokens, setFilteredTokens] = useState<Token[]>([]);
+  const [filteredEditions, setFilteredEditions] = useState<Edition[]>([]);
 
   useEffect(() => {
     if (data?.user) {
@@ -59,40 +78,40 @@ export function UserProfile({ walletAddress, username, avatarUrl }: UserProfileP
         const { tokensOwned, editionsCreated } = data.user;
 
         // Filter tokensOwned, excluding tokenId #1
-        let filteredTokensOwned: any[] = [];
+        let filteredTokensOwned: Token[] = [];
         if (tokensOwned?.length > 0) {
           const tokenResults = await Promise.allSettled(
-            tokensOwned.map(async (token: any) => {
+            tokensOwned.map(async (token: Token) => {
               const glyphAddress = await getGlyphContractFromEdition(token.edition.id);
               return { token, glyphAddress };
             })
           );
           filteredTokensOwned = tokenResults
             .filter(
-              (result: any) =>
+              (result): result is PromiseFulfilledResult<{ token: Token; glyphAddress: string }> =>
                 result.status === 'fulfilled' &&
                 result.value.glyphAddress === GLYPH_SET_ADDRESS.toLowerCase() &&
                 Number(result.value.token.tokenId) !== 1
             )
-            .map((result: any) => result.value.token);
+            .map((result) => result.value.token);
         }
 
         // Filter editionsCreated
-        let filteredEditionsCreated: any[] = [];
+        let filteredEditionsCreated: Edition[] = [];
         if (editionsCreated?.length > 0) {
           const editionResults = await Promise.allSettled(
-            editionsCreated.map(async (edition: any) => {
+            editionsCreated.map(async (edition: Edition) => {
               const glyphAddress = await getGlyphContractFromEdition(edition.id);
               return { edition, glyphAddress };
             })
           );
           filteredEditionsCreated = editionResults
             .filter(
-              (result: any) =>
+              (result): result is PromiseFulfilledResult<{ edition: Edition; glyphAddress: string }> =>
                 result.status === 'fulfilled' &&
                 result.value.glyphAddress === GLYPH_SET_ADDRESS.toLowerCase()
             )
-            .map((result: any) => result.value.edition);
+            .map((result) => result.value.edition);
         }
 
         setFilteredTokens(filteredTokensOwned);
@@ -108,9 +127,7 @@ export function UserProfile({ walletAddress, username, avatarUrl }: UserProfileP
 
   return (
     <div className="flex flex-col gap-4">
-      <div
-        className="sticky top-[44px] z-30 flex justify-center py-1 bg-white"
-      >
+      <div className="sticky top-[44px] z-30 flex justify-center py-1 bg-white">
         <button
           onClick={() => {
             setTab('collected');
@@ -139,7 +156,14 @@ export function UserProfile({ walletAddress, username, avatarUrl }: UserProfileP
         </button>
       </div>
       <div className="flex items-center gap-2 mt-2">
-        <img src={avatarUrl} alt={username} className="w-12 h-12 rounded-full" />
+        <Image
+          src={avatarUrl || 'https://default-avatar.png'}
+          alt={username}
+          width={48}
+          height={48}
+          className="rounded-full"
+          unoptimized
+        />
         {selectedEdition ? (
           <h1
             className="text-xl font-bold cursor-pointer text-blue-500 hover:underline"
@@ -154,17 +178,14 @@ export function UserProfile({ walletAddress, username, avatarUrl }: UserProfileP
       <section className="mt-2">
         {tab === 'collected' ? (
           selectedEdition ? (
-            <TokenDetail
-              edition={selectedEdition}
-              tokenId={selectedEdition.tokenId}
-            />
+            <TokenDetail edition={selectedEdition} tokenId={selectedEdition.tokenId} />
           ) : (
             <>
               {filteredTokens.length === 0 ? (
                 <p className="text-sm text-gray-500">No tokens collected</p>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
-                  {filteredTokens.map((token: any) => (
+                  {filteredTokens.map((token: Token) => (
                     <div
                       key={token.id}
                       className="cursor-pointer"
@@ -187,17 +208,14 @@ export function UserProfile({ walletAddress, username, avatarUrl }: UserProfileP
             </>
           )
         ) : selectedEdition ? (
-          <TokenDetail
-            edition={selectedEdition}
-            tokenId={selectedEdition.tokenId}
-          />
+          <TokenDetail edition={selectedEdition} tokenId={selectedEdition.tokenId} />
         ) : (
           <>
             {filteredEditions.length === 0 ? (
               <p className="text-sm text-gray-500">No editions created</p>
             ) : (
               <div className="grid grid-cols-2 gap-2">
-                {filteredEditions.map((edition: any) => (
+                {filteredEditions.map((edition: Edition) => (
                   <div
                     key={edition.id}
                     className="cursor-pointer"

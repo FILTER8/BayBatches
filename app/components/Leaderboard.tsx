@@ -1,7 +1,9 @@
+// app/components/Leaderboard.tsx
 'use client';
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import Image from 'next/image'; // Add this import
 
 interface LeaderboardEntry {
   walletAddress: string;
@@ -24,12 +26,10 @@ export function Leaderboard({ mostCollected, mostCreated }: LeaderboardProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div
-        className="sticky top-[44px] z-30 flex justify-center py-1 bg-white"
-      >
+      <div className="sticky top-[44px] z-30 flex justify-center py-1 bg-white">
         <button
           onClick={() => setTab('collected')}
-          className="w-full h-11 flex items-center justify-center text-sm "
+          className="w-full h-11 flex items-center justify-center text-sm"
           style={{
             backgroundColor: tab === 'collected' ? '#118bcb' : '#e6e6e6',
             color: tab === 'collected' ? '#ffffff' : '#000000',
@@ -39,7 +39,7 @@ export function Leaderboard({ mostCollected, mostCreated }: LeaderboardProps) {
         </button>
         <button
           onClick={() => setTab('created')}
-          className="w-full h-11 flex items-center justify-center text-sm "
+          className="w-full h-11 flex items-center justify-center text-sm"
           style={{
             backgroundColor: tab === 'created' ? '#118bcb' : '#e6e6e6',
             color: tab === 'created' ? '#ffffff' : '#000000',
@@ -58,10 +58,13 @@ export function Leaderboard({ mostCollected, mostCreated }: LeaderboardProps) {
               className="flex items-center gap-2 p-2 w-full h-11 bg-white border border-gray-300 cursor-pointer hover:bg-gray-100"
               onClick={() => router.push(`/user/${entry.walletAddress}`)}
             >
-              <img
-                src={entry.avatarUrl}
+              <Image
+                src={entry.avatarUrl || 'https://default-avatar.png'}
                 alt={entry.username}
-                className="w-8 h-8 rounded-full"
+                width={32}
+                height={32}
+                className="rounded-full"
+                unoptimized // Optional: Use if external URLs cause issues
               />
               <span className="text-sm font-medium truncate">{entry.username}</span>
               <span className="text-sm text-gray-500 ml-auto">
