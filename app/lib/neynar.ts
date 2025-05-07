@@ -1,5 +1,12 @@
 const profileCache = new Map<string, { username: string; avatarUrl: string }>();
 
+interface UserProfile {
+  username: string;
+  display_name: string;
+  pfp_url: string;
+  address: string;
+}
+
 export async function getUserProfile(walletAddress: string) {
   const lowerAddress = walletAddress.toLowerCase();
   if (profileCache.has(lowerAddress)) {
@@ -10,10 +17,10 @@ export async function getUserProfile(walletAddress: string) {
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    const user = await response.json();
+    const user: UserProfile | null = await response.json();
     const profile = {
       username: user?.username || user?.display_name || walletAddress.slice(0, 6),
-      avatarUrl: user?.pfp_url || 'https://default-avatar.png',
+      avatarUrl: user?.pfp_url || 'https://splashicon.png',
     };
     profileCache.set(lowerAddress, profile);
     return profile;
@@ -21,14 +28,14 @@ export async function getUserProfile(walletAddress: string) {
     console.error(`Failed to fetch profile for ${walletAddress}:`, error);
     const profile = {
       username: walletAddress.slice(0, 6),
-      avatarUrl: 'https://default-avatar.png',
+      avatarUrl: 'https://splashicon.png',
     };
     profileCache.set(lowerAddress, profile);
     return profile;
   }
 }
 
-export async function getUserProfiles(walletAddresses: string[]) {
+export async function getUserProfiles(walletAddresses: string[]): Promise<Record<string, { username: string; avatarUrl: string }>> {
   try {
     const lowerAddresses = walletAddresses.map((addr) => addr.toLowerCase());
     const response = await fetch('/api/profiles', {
@@ -39,14 +46,22 @@ export async function getUserProfiles(walletAddresses: string[]) {
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    const profiles = await response.json();
-    for (const [address, user] of Object.entries(profiles)) {
+    const profiles: Record<string, UserProfile> = await response.json();
+    for (const [address, user] of Object.entries(profiles) as [string, UserProfile][]) {
       profileCache.set(address, {
         username: user.username || user.display_name || address.slice(0, 6),
-        avatarUrl: user.pfp_url || 'https://default-avatar.png',
+        avatarUrl: user.pfp_url || 'https://splashicon.png',
       });
     }
-    return profiles;
+    return Object.fromEntries(
+      Object.entries(profiles).map(([address, user]) => [
+        address,
+        {
+          username: user.username || user.display_name || address.slice(0, 6),
+          avatarUrl: user.pfp_url || 'https://splashicon.png',
+        },
+      ])
+    );
   } catch (error) {
     console.error('Failed to fetch bulk profiles:', error);
     return {};
