@@ -41,7 +41,7 @@ async function resolveFidsFromAddresses(addresses: string[]): Promise<Record<str
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'api_key': process.env.NEYNAR_API_KEY,
+        'api_key': process.env.NEYNAR_API_KEY!, // Assert defined
         'x-neynar-experimental': 'true',
       },
       body: JSON.stringify({ addresses: addresses.map(addr => addr.toLowerCase()) }),
