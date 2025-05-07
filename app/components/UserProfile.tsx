@@ -1,4 +1,3 @@
-// app/components/UserProfile.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,7 +7,7 @@ import { USER_PROFILE_QUERY } from '../graphql/queries';
 import MemoizedNFTImage from './NFTImage';
 import { TokenDetail } from './TokenDetail';
 import MintbayEditionAbi from '../contracts/MintbayEdition.json';
-import Image from 'next/image'; // Added for avatar
+import Image from 'next/image';
 
 const GLYPH_SET_ADDRESS = '0x94e1f188d72970ce27c890fb9469a5bbb550e2d7';
 const ALCHEMY_URL = process.env.NEXT_PUBLIC_ALCHEMY_URL || '';
@@ -40,13 +39,18 @@ async function getGlyphContractFromEdition(address: string): Promise<string | nu
 interface Token {
   id: string;
   tokenId: string;
-  edition: {
-    id: string;
-  };
+  edition: Edition;
 }
 
 interface Edition {
   id: string;
+  glyphContract: string;
+  name: string;
+  totalSupply: number;
+  editionSize: number;
+  price: string;
+  isFreeMint: boolean;
+  paused: boolean;
 }
 
 interface SelectedEdition extends Edition {
