@@ -13,10 +13,11 @@ interface NeynarUser {
   fid: number;
   username: string;
   display_name: string;
-  pfp: { url: string };
+  pfp_url?: string; // For fetchBulkUsers
+  pfp?: { url: string }; // For /v2/user/bulk
   verifications: string[];
   custody_address?: string;
-  address?: string; // Used in /v2/user/bulk response
+  address?: string; // For /v2/user/bulk
 }
 
 if (!process.env.NEYNAR_API_KEY) {
@@ -91,7 +92,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       username: user.username || address.slice(0, 6),
       display_name: user.display_name || user.username || address.slice(0, 6),
-      pfp_url: user.pfp.url || '/default-avatar.png',
+      pfp_url: user.pfp_url || '/splashicon.png',
       address: user.verifications?.[0] || address,
     });
   } catch (error) {
@@ -130,7 +131,7 @@ export async function POST(request: Request) {
         acc[address] = {
           username: user.username || address.slice(0, 6),
           display_name: user.display_name || user.username || address.slice(0, 6),
-          pfp_url: user.pfp.url || '/splashicon.png',
+          pfp_url: user.pfp_url || '/splashicon.png',
           address,
         };
       }
