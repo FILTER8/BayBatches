@@ -9,6 +9,16 @@ interface UserProfile {
   address: string;
 }
 
+interface NeynarUser {
+  fid: number;
+  username: string;
+  display_name: string;
+  pfp: { url: string };
+  verifications: string[];
+  custody_address?: string;
+  address?: string; // Used in /v2/user/bulk response
+}
+
 if (!process.env.NEYNAR_API_KEY) {
   throw new Error('NEYNAR_API_KEY is not defined in environment variables');
 }
@@ -42,7 +52,7 @@ async function resolveFidsFromAddresses(addresses: string[]): Promise<Record<str
     }
 
     const data = await response.json();
-    return data.users.reduce((acc: Record<string, number>, user: any) => {
+    return data.users.reduce((acc: Record<string, number>, user: NeynarUser) => {
       if (user.fid && user.address) {
         acc[user.address.toLowerCase()] = user.fid;
       }
@@ -114,13 +124,13 @@ export async function POST(request: Request) {
     }
 
     const response = await client.fetchBulkUsers({ fids });
-    const profiles = response.users.reduce((acc: Record<string, UserProfile>, user: any) => {
+    const profiles = response.users.reduce((acc: Record<string, UserProfile>, user: NeynarUser) => {
       const address = user.verifications?.[0]?.toLowerCase() || lowerAddresses.find(addr => fidMap[addr] === user.fid);
       if (address) {
         acc[address] = {
           username: user.username || address.slice(0, 6),
           display_name: user.display_name || user.username || address.slice(0, 6),
-          pfp_url: user.pfp.url || '/default-avatar.png',
+          pfp_url: user.pfp.url || '/splashicon.png',
           address,
         };
       }
