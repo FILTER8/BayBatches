@@ -693,18 +693,17 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
 } else if (numColors >= 9) {
   const bgColorsRows: number[] = [];
   const fgColorsRows: number[] = [];
-  const shuffledColors = [...availableColors].sort(() => Math.random() - 0.5);
+  const shuffledColors = shuffleArray([...availableColors]); // Use shuffleArray for consistency
   for (let i = 0; i < 9; i++) {
-    bgColorsRows[i] = shuffledColors[i];
-    usedColors.add(shuffledColors[i]);
+    bgColorsRows[i] = shuffledColors[i % shuffledColors.length]; // Cycle through colors
+    usedColors.add(bgColorsRows[i]);
   }
-  const remainingColors = shuffledColors.slice(0, 9);
   for (let i = 0; i < 9; i++) {
-    const availableFgColors = remainingColors.filter((c) => c !== bgColorsRows[i]);
-    fgColorsRows[i] = availableFgColors[Math.floor(Math.random() * availableFgColors.length)] || remainingColors[0];
+    const availableFgColors = shuffledColors.filter((c) => c !== bgColorsRows[i]);
+    fgColorsRows[i] = availableFgColors[Math.floor(Math.random() * availableFgColors.length)] || shuffledColors[0];
   }
-  currentBgColor = bgColorsRows![row];
-  currentFgColor = fgColorsRows![row];
+  currentBgColor = bgColorsRows[row];
+  currentFgColor = fgColorsRows[row];
         } else {
           currentBgColor = row >= 1 && row <= 7 && (col === 1 || col >= 3) ? typoBgColor! : bgColor!;
           currentFgColor =
