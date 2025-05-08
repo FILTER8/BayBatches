@@ -26,7 +26,7 @@ export function Leaderboard({ mostCollected, mostCreated }: LeaderboardProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="sticky top-[44px] z-30 flex justify-center py-1 ">
+      <div className="sticky top-[40px] z-30 flex justify-center">
         <button
           onClick={() => setTab('collected')}
           className="w-full h-11 flex items-center justify-center text-sm"
@@ -67,7 +67,7 @@ export function Leaderboard({ mostCollected, mostCreated }: LeaderboardProps) {
                 unoptimized // Optional: Use if external URLs cause issues
               />
               <span className="text-sm font-medium truncate">{entry.username}</span>
-              <span className="text-sm text-gray-500 ml-auto">
+              <span className="text-sm  ml-auto">
                 {tab === 'collected'
                   ? `${entry.tokensOwnedCount} tokens`
                   : `${entry.editionsCreatedCount} editions`}

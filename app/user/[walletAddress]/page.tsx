@@ -37,11 +37,11 @@ export default function UserProfilePage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen font-sans text-[var(--app-foreground)] mini-app-theme bg-[#ffffff]">
-      <div className="w-full max-w-md mx-auto px-4 py-3 sticky top-0 z-10 bg-[#ffffff]">
+    <div className="flex flex-col min-h-screen font-sans text-[#111111] mini-app-theme bg-[#ffffff]">
+      <div className="w-full max-w-md mx-auto px-4 py-3">
         <Header />
         <div
-          className="w-full h-11 flex items-center justify-center text-white text-sm tracking-[0.1em] mb-3 cursor-pointer"
+           className="w-full h-11 flex items-center justify-center text-white text-sm tracking-[0.1em] mb-3"
           style={{ backgroundColor: '#ff5f11' }}
           onClick={() => router.push('/leaderboard')}
         >

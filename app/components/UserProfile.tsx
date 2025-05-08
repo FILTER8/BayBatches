@@ -130,8 +130,8 @@ export function UserProfile({ walletAddress, username, avatarUrl }: UserProfileP
   if (error) return <div className="text-center text-red-500">Error: {error.message}</div>;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="sticky top-[44px] z-30 flex justify-center py-1 bg-white">
+    <div className="flex flex-col gap-2">
+      <div className="sticky top-[44px] z-30 flex justify-center py-1">
         <button
           onClick={() => {
             setTab('collected');
@@ -163,23 +163,23 @@ export function UserProfile({ walletAddress, username, avatarUrl }: UserProfileP
         <Image
           src={avatarUrl || 'https://bay-batches.vercel.app/splashicon.png'}
           alt={username}
-          width={48}
-          height={48}
+          width={32}
+          height={32}
           className="rounded-full"
           unoptimized
         />
         {selectedEdition ? (
           <h1
-            className="text-xl font-bold cursor-pointer text-blue-500 hover:underline"
+            className="text-sm font-bold cursor-pointer text-blue-500 hover:underline"
             onClick={() => setSelectedEdition(null)}
           >
             {username}
           </h1>
         ) : (
-          <h1 className="text-xl font-bold">{username}</h1>
+          <h1 className="text-sm font-bold">{username}</h1>
         )}
       </div>
-      <section className="mt-2">
+      <section className="mt-0">
         {tab === 'collected' ? (
           selectedEdition ? (
             <TokenDetail edition={selectedEdition} tokenId={selectedEdition.tokenId} />

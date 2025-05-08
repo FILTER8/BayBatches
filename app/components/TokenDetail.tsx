@@ -112,7 +112,7 @@ export function TokenDetail({ edition, tokenId = 1 }: TokenDetailProps) {
               : edition.paused
               ? 'paused'
               : edition.isFreeMint
-              ? `free (${LAUNCHPAD_FEE} ETH)`
+              ? `collect (${LAUNCHPAD_FEE} ETH)`
               : `collect (${LAUNCHPAD_FEE} ETH)`}
           </button>
           {isWriting && <p className="text-xs mt-2 text-yellow-500">Minting in progress...</p>}
