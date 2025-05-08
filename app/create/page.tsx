@@ -736,7 +736,7 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
           if (isInitialGeneration || !isVertical) {
             if (row === newTypoRow) {
               // Horizontal BASE starting at newTypoCol
-              const colToLetterIdx = [newTypoCol, newTypoCol + 1, newTypoCol + 2, newTypoCol + 3].indexOf(col);
+              const colToLetterIdx = [newTypoCol ?? 1, (newTypoCol ?? 1) + 1, (newTypoCol ?? 1) + 2, (newTypoCol ?? 1) + 3].indexOf(col);
               if (colToLetterIdx >= 0 && col <= 7) {
                 newFgGlyphs[i] = variationBase[colToLetterIdx]; // B, A, S, E
               } else {
