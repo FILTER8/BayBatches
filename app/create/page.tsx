@@ -184,11 +184,11 @@ function ColorSelection({ setPage }: { setPage: (page: number) => void }) {
   return (
     <div className="max-w-[400px] mx-auto px-2">
       <h2 className="text-base text-center text-gray-500 mb-2">Select your Colors</h2>
-      <div className="grid grid-cols-3 mb-4">
+      <div className="grid grid-cols-3 mb-4 w-full">
         {COLORS.map((rgb, idx) => (
           <div
             key={idx}
-            className={`w-[118px] h-[118px] border-none cursor-pointer transition-all ${
+            className={`w-full aspect-square border-none cursor-pointer transition-all ${
               selectedColors.includes(idx) ? "opacity-80" : "opacity-100"
             }`}
             style={{ backgroundColor: `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})` }}
