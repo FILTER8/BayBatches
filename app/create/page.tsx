@@ -489,25 +489,19 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
       typoBgColor = typoColor;
       typoColor2 = typoColor;
       frameColor2 = typoColor;
-    } else if (numColors >= 9) {
-      const bgColorsRows: number[] = [];
-      const fgColorsRows: number[] = [];
-      const shuffledColors = [...availableColors].sort(() => Math.random() - 0.5);
-      for (let i = 0; i < 9; i++) {
-        bgColorsRows[i] = shuffledColors[i];
-        usedColors.add(shuffledColors[i]);
-      }
-      const remainingColors = shuffledColors.slice(0, 9);
-      for (let i = 0; i < 9; i++) {
-        const availableFgColors = remainingColors.filter((c) => c !== bgColorsRows[i]);
-        fgColorsRows[i] = availableFgColors[Math.floor(Math.random() * availableFgColors.length)] || remainingColors[0];
-      }
-      bgColor = bgColorsRows[0];
-      typoColor1 = fgColorsRows[0];
-      frameColor = fgColorsRows[0];
-      typoBgColor = bgColorsRows[0];
-      typoColor2 = fgColorsRows[0];
-      frameColor2 = fgColorsRows[0];
+
+} else if (numColors >= 9) {
+  const shuffledColors = [...availableColors].sort(() => Math.random() - 0.5);
+  for (let i = 0; i < 9; i++) {
+    usedColors.add(shuffledColors[i]);
+  }
+  bgColor = shuffledColors[0];
+  typoColor1 = shuffledColors[1] || shuffledColors[0];
+  frameColor = shuffledColors[1] || shuffledColors[0];
+  typoBgColor = shuffledColors[0];
+  typoColor2 = shuffledColors[1] || shuffledColors[0];
+  frameColor2 = shuffledColors[1] || shuffledColors[0];
+
     } else {
       bgColor = getRandomColor();
       typoColor1 = numColors >= 2 ? getRandomColor([bgColor]) : bgColor;
