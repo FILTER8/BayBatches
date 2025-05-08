@@ -416,8 +416,6 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
     let typoColor: number | undefined;
     let graphicColorTop: number | undefined;
     let graphicColorBottom: number | undefined;
-    let bgColorsRows: number[] | undefined;
-    let fgColorsRows: number[] | undefined;
     let blockAssignments: { bgColor: number; fgColor: number }[] | undefined;
 
     if (numColors === 4) {
