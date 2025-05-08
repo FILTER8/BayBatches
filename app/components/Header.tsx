@@ -1,12 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Button } from './DemoComponents';
 import { useAddFrame, useMiniKit } from '@coinbase/onchainkit/minikit';
 import { useCallback, useMemo, useState } from 'react';
-import { Plus, Check, Book, LogOut } from '@geist-ui/icons';
-import { useAccount, useDisconnect } from 'wagmi';
-import { ConnectWallet } from "@coinbase/onchainkit/wallet";
+import { Plus, Check, Book, LogOut, LogIn } from '@geist-ui/icons';
+import { useAccount, useConnect, useDisconnect } from 'wagmi';
 
 export default function Header() {
   const router = useRouter();
@@ -14,6 +12,7 @@ export default function Header() {
   const addFrame = useAddFrame();
   const [frameAdded, setFrameAdded] = useState(false);
   const { isConnected } = useAccount();
+  const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
 
   const handleAddFrame = useCallback(async () => {
@@ -24,15 +23,13 @@ export default function Header() {
   const saveFrameButton = useMemo(() => {
     if (context && !context.client.added) {
       return (
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
           onClick={handleAddFrame}
-          className="text-[#ffffff] p-4"
-          icon={<Plus className="w-4 h-4 text-[#ffffff]" />}
+          className="flex items-center space-x-1 text-sm tracking-[0.1em] text-[#ffffff] hover:bg-gray-800 py-2 px-4 transition-colors"
         >
-          Save Frame
-        </Button>
+          <Plus className="w-4 h-4 text-[#ffffff]" />
+          <span>Save Frame</span>
+        </button>
       );
     }
 
@@ -48,7 +45,7 @@ export default function Header() {
     return null;
   }, [context, frameAdded, handleAddFrame]);
 
-   return (
+  return (
     <header className="flex items-center h-11 bg-black text-white px-4">
       <div className="flex items-center space-x-2">
         <button
@@ -69,12 +66,18 @@ export default function Header() {
         {isConnected ? (
           <button
             onClick={() => disconnect()}
-            className="text-sm tracking-[0.1em] text-[#ffffff]"
+            className="text-sm tracking-[0.1em] text-[#ffffff] hover:bg-gray-800 py-2 px-4 transition-colors"
           >
             <LogOut className="w-4 h-4 text-[#ffffff]" />
           </button>
         ) : (
-        <ConnectWallet className="wallet-btn flex items-center text-sm tracking-[0.1em] text-[#ffffff] bg-black hover:bg-gray-800 py-2 px-4 transition-colors" />
+          <button
+            onClick={() => connect({ connector: connectors[0] })}
+            className="flex items-center space-x-1 text-sm tracking-[0.1em] text-[#ffffff] bg-black hover:bg-gray-800 py-2 px-4 transition-colors"
+          >
+            <LogIn className="w-4 h-4 text-[#ffffff]" />
+            <span>connect</span>
+          </button>
         )}
       </div>
     </header>
