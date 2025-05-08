@@ -228,6 +228,7 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
   const lastTapRef = useRef<{ time: number; idx: number } | null>(null);
   const [selectedGlyph, setSelectedGlyph] = useState<number | null>(null);
   const [showInfo, setShowInfo] = useState(false);
+  const [debouncedComplexity, setDebouncedComplexity] = useState(complexity);
 
   const size = 9;
   const scale = 48;
@@ -291,6 +292,22 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
       setGlyphs(fallbackGlyphs.map((g) => ({ id: g.id, bitmap: BigInt(g.bitmap) })));
     }
   }, [provider]);
+
+    useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedComplexity(complexity);
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [complexity]);
+
+  // 2. Auto-generate when debounced complexity changes
+  useEffect(() => {
+    if (selectedColors.length >= 2 && hasGenerated) {
+      generateArt();
+    }
+  }, [debouncedComplexity]);
+
 
   useEffect(() => {
     fetchGlyphs();
@@ -673,9 +690,21 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
           currentFgColor = randomColors[Math.floor(Math.random() * randomColors.length)];
           usedColors.add(currentBgColor);
           usedColors.add(currentFgColor);
-        } else if (numColors >= 9) {
-          currentBgColor = bgColorsRows![row];
-          currentFgColor = fgColorsRows![row];
+} else if (numColors >= 9) {
+  const bgColorsRows: number[] = [];
+  const fgColorsRows: number[] = [];
+  const shuffledColors = [...availableColors].sort(() => Math.random() - 0.5);
+  for (let i = 0; i < 9; i++) {
+    bgColorsRows[i] = shuffledColors[i];
+    usedColors.add(shuffledColors[i]);
+  }
+  const remainingColors = shuffledColors.slice(0, 9);
+  for (let i = 0; i < 9; i++) {
+    const availableFgColors = remainingColors.filter((c) => c !== bgColorsRows[i]);
+    fgColorsRows[i] = availableFgColors[Math.floor(Math.random() * availableFgColors.length)] || remainingColors[0];
+  }
+  currentBgColor = bgColorsRows![row];
+  currentFgColor = fgColorsRows![row];
         } else {
           currentBgColor = row >= 1 && row <= 7 && (col === 1 || col >= 3) ? typoBgColor! : bgColor!;
           currentFgColor =
@@ -1162,6 +1191,13 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
     }
   }, [redrawCanvas, selectedColors, hasGenerated]);
 
+    // Modify your existing slider input like this:
+  const handleComplexityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newComplexity = parseInt(e.target.value);
+    setComplexity(newComplexity);
+    // Let the useEffect handle the actual generation
+  };
+
   return (
     <div className="max-w-[400px] mx-auto">
       <div className="flex items-center justify-center mb-2">
@@ -1211,19 +1247,15 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
         <p className="text-red-500 mb-4 text-center">{error}</p>
       )}
       <div className="space-y-4 mb-2">
-        <input
-          type="range"
-          min="1"
-          max="10"
-          step="1"
-          value={complexity}
-          onChange={(e) => {
-            const newComplexity = parseInt(e.target.value);
-            console.log("Complexity changed to:", newComplexity);
-            setComplexity(newComplexity);
-          }}
-          className="w-full"
-        />
+   <input
+        type="range"
+        min="1"
+        max="10"
+        step="1"
+        value={complexity}
+        onChange={handleComplexityChange}
+        className="w-full"
+      />
         <div className="mt-6 space-y-2">
           <button
             onClick={() => {
