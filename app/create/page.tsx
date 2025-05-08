@@ -208,6 +208,8 @@ function ColorSelection({ setPage }: { setPage: (page: number) => void }) {
   );
 }
 
+
+
 function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedColors, setSelectedColors] = useState<number[]>([]);
@@ -272,21 +274,21 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
         throw new Error("No contract deployed at the specified address");
       }
 
-const glyphsData = await callWithRetry(() => contract.getAllGlyphs());
-const fetchedGlyphs = glyphsData
-  .slice(0, 79)
-  .map((bitmap: bigint, id: number) => ({ id, bitmap }))
-  .filter((g: { id: number; bitmap: bigint }) => g.id >= 1);
+      const glyphsData = await callWithRetry(() => contract.getAllGlyphs());
+      const fetchedGlyphs = glyphsData
+        .slice(0, 79)
+        .map((bitmap: bigint, id: number) => ({ id, bitmap }))
+        .filter((g: { id: number; bitmap: bigint }) => g.id >= 1);
 
       localStorage.setItem(
         "cachedGlyphs",
-       JSON.stringify(fetchedGlyphs.map((g: { id: number; bitmap: bigint }) => ({ id: g.id, bitmap: g.bitmap.toString() })))
+        JSON.stringify(fetchedGlyphs.map((g: { id: number; bitmap: bigint }) => ({ id: g.id, bitmap: g.bitmap.toString() })))
       );
       setGlyphs(fetchedGlyphs.length > 0 ? fetchedGlyphs : fallbackGlyphs.map((g) => ({ id: g.id, bitmap: BigInt(g.bitmap) })));
     } catch (error: unknown) {
       console.error("Glyphs fetch failed:", error);
       setError(`Failed to load glyphs from contract: ${(error as Error).message || "Unknown error"}. Using fallback glyphs.`);
-      setGlyphs(fallbackGlyphs.map((g: { id: number; bitmap: string }) => ({ id: g.id, bitmap: BigInt(g.bitmap) })));
+      setGlyphs(fallbackGlyphs.map((g) => ({ id: g.id, bitmap: BigInt(g.bitmap) })));
     }
   }, [provider]);
 
@@ -348,43 +350,6 @@ const fetchedGlyphs = glyphsData
       }
     }
   }, [setPage]);
-
-  const isTypoGlyph = useCallback(
-    (row: number, col: number) => {
-      if (complexity === 1 || complexity === 2) {
-        return row === typoRow && col >= 1 && col <= 7;
-      } else if (complexity === 3) {
-        return col === typoCol && row >= 1 && row <= 7;
-      } else if (complexity === 4) {
-        return (
-          (row === 1 && (col === 1 || col === 7)) ||
-          (row === 2 && (col === 2 || col === 6)) ||
-          (row === 3 && (col === 3 || col === 5)) ||
-          (row === 4 && col === 4) ||
-          (row === 5 && (col === 3 || col === 5)) ||
-          (row === 6 && (col === 2 || col === 6)) ||
-          (row === 7 && (col === 1 || col === 7))
-        );
-      } else if (complexity === 5) {
-        return col === typoCol && row >= 1 && row <= 7;
-      } else if (complexity === 6) {
-        return [1, 3, 5, 7].includes(row) || [2, 4, 6].includes(row);
-      } else if (complexity === 7) {
-        return row === typoRow && col >= 1 && col <= 4;
-      } else if (complexity === 8) {
-        return (
-          (row === typoRow && col >= 1 && col <= 4) ||
-          (row === typoRow2 && col >= 1 && col <= 7)
-        );
-      } else if (complexity === 9) {
-        return [1, 3, 5, 7].includes(col);
-      } else if (complexity === 10) {
-        return row >= 1 && row <= 7 && col === typoCols[row - 1];
-      }
-      return false;
-    },
-    [complexity, typoRow, typoRow2, typoCol, typoCols]
-  );
 
   const generateArt = useCallback(() => {
     if (selectedColors.length < 2) return;
@@ -499,41 +464,41 @@ const fetchedGlyphs = glyphsData
       typoBgColor = innerBgColor1;
       typoColor2 = typoColor;
       frameColor2 = typoColor;
-} else if (numColors === 8) {
-  typoColor = getRandomColor();
-  bgColor = typoColor;
-  typoColor1 = typoColor;
-  frameColor = typoColor;
-  typoBgColor = typoColor;
-  typoColor2 = typoColor;
-  frameColor2 = typoColor;
-} else if (numColors >= 9) {
-  const bgColorsRows: number[] = [];
-  const fgColorsRows: number[] = [];
-  const shuffledColors = [...availableColors].sort(() => Math.random() - 0.5);
-  for (let i = 0; i < 9; i++) {
-    bgColorsRows[i] = shuffledColors[i];
-    usedColors.add(shuffledColors[i]);
-  }
-  const remainingColors = shuffledColors.slice(0, 9);
-  for (let i = 0; i < 9; i++) {
-    const availableFgColors = remainingColors.filter((c) => c !== bgColorsRows[i]);
-    fgColorsRows[i] = availableFgColors[Math.floor(Math.random() * availableFgColors.length)] || remainingColors[0];
-  }
-  bgColor = bgColorsRows[0];
-  typoColor1 = fgColorsRows[0];
-  frameColor = fgColorsRows[0];
-  typoBgColor = bgColorsRows[0];
-  typoColor2 = fgColorsRows[0];
-  frameColor2 = fgColorsRows[0];
-} else {
-  bgColor = getRandomColor();
-  typoColor1 = numColors >= 2 ? getRandomColor([bgColor]) : bgColor;
-  frameColor = numColors >= 3 ? getRandomColor([bgColor, typoColor1]) : typoColor1;
-  typoBgColor = bgColor;
-  typoColor2 = typoColor1;
-  frameColor2 = frameColor;
-}
+    } else if (numColors === 8) {
+      typoColor = getRandomColor();
+      bgColor = typoColor;
+      typoColor1 = typoColor;
+      frameColor = typoColor;
+      typoBgColor = typoColor;
+      typoColor2 = typoColor;
+      frameColor2 = typoColor;
+    } else if (numColors >= 9) {
+      const bgColorsRows: number[] = [];
+      const fgColorsRows: number[] = [];
+      const shuffledColors = [...availableColors].sort(() => Math.random() - 0.5);
+      for (let i = 0; i < 9; i++) {
+        bgColorsRows[i] = shuffledColors[i];
+        usedColors.add(shuffledColors[i]);
+      }
+      const remainingColors = shuffledColors.slice(0, 9);
+      for (let i = 0; i < 9; i++) {
+        const availableFgColors = remainingColors.filter((c) => c !== bgColorsRows[i]);
+        fgColorsRows[i] = availableFgColors[Math.floor(Math.random() * availableFgColors.length)] || remainingColors[0];
+      }
+      bgColor = bgColorsRows[0];
+      typoColor1 = fgColorsRows[0];
+      frameColor = fgColorsRows[0];
+      typoBgColor = bgColorsRows[0];
+      typoColor2 = fgColorsRows[0];
+      frameColor2 = fgColorsRows[0];
+    } else {
+      bgColor = getRandomColor();
+      typoColor1 = numColors >= 2 ? getRandomColor([bgColor]) : bgColor;
+      frameColor = numColors >= 3 ? getRandomColor([bgColor, typoColor1]) : typoColor1;
+      typoBgColor = bgColor;
+      typoColor2 = typoColor1;
+      frameColor2 = frameColor;
+    }
 
     const cornerGlyph = availableGlyphs[0] || { id: 1 };
     const edgeGlyphs = availableGlyphs.length > 1 ? availableGlyphs.slice(1) : [cornerGlyph];
@@ -562,21 +527,35 @@ const fetchedGlyphs = glyphsData
     const variation2 = TYPO_VARIATIONS[Math.floor(Math.random() * TYPO_VARIATIONS.length)];
     const variationBase = TYPO_VARIATIONS_BASE[Math.floor(Math.random() * TYPO_VARIATIONS_BASE.length)];
 
-    let newTypoRow = typoRow;
-    let newTypoRow2 = typoRow2;
-    if (complexity === 1 || complexity === 2 || complexity === 7) {
-      newTypoRow = Math.floor(Math.random() * 7) + 1;
-    } else if (complexity === 8) {
-      const possibleRows = [2, 4, 6];
-      const rowIndex1 = Math.floor(Math.random() * possibleRows.length);
-      newTypoRow = possibleRows[rowIndex1];
-      const remainingRows = possibleRows.filter((r) => r !== newTypoRow);
-      newTypoRow2 = remainingRows[Math.floor(Math.random() * remainingRows.length)];
+ let newTypoRow = typoRow;
+  let newTypoRow2 = typoRow2;
+  let newTypoCol = typoCol;
+  let newTypoCols = typoCols;
+  let isVertical = false;
+
+  const isInitialGeneration = localStorage.getItem("shouldGenerateArt") === "true";
+  if (isInitialGeneration || complexity === 1) {
+    isVertical = Math.random() < 0.5; // 50% chance for vertical BASE
+    if (isVertical) {
+      newTypoCol = Math.floor(Math.random() * 7) + 1; // Random column 1–7 for vertical BASE
+      newTypoRow = Math.floor(Math.random() * 3) + 1; // Random start row 1–3 for B
+    } else {
+      newTypoRow = Math.floor(Math.random() * 7) + 1; // Random row 1–7 for horizontal BASE
+      newTypoCol = Math.floor(Math.random() * 3) + 1; // Random start column 1–3 for B
     }
-    const newTypoCol = complexity === 3 || complexity === 5 ? Math.floor(Math.random() * 7) + 1 : typoCol;
-    const newTypoCols = complexity === 10
-      ? Array.from({ length: 7 }, () => Math.floor(Math.random() * 7) + 1)
-      : typoCols;
+  } else if (complexity === 2 || complexity === 7) {
+    newTypoRow = Math.floor(Math.random() * 7) + 1;
+  } else if (complexity === 8) {
+    const possibleRows = [2, 4, 6];
+    const rowIndex1 = Math.floor(Math.random() * possibleRows.length);
+    newTypoRow = possibleRows[rowIndex1];
+    const remainingRows = possibleRows.filter((r) => r !== newTypoRow);
+    newTypoRow2 = remainingRows[Math.floor(Math.random() * remainingRows.length)];
+  }
+  newTypoCol = complexity === 3 || complexity === 5 ? Math.floor(Math.random() * 7) + 1 : newTypoCol;
+  newTypoCols = complexity === 10
+    ? Array.from({ length: 7 }, () => Math.floor(Math.random() * 7) + 1)
+    : typoCols;
 
     const blockGlyphCache: { [key: string]: number } = {};
     const rowGlyphCache: { [key: number]: number } = {};
@@ -658,7 +637,7 @@ const fetchedGlyphs = glyphsData
 
         if (numColors === 4) {
           currentBgColor = bgColor!;
-          currentFgColor = isTypoGlyph(row, col) ? typoColor! : (row <= 4 ? graphicColorTop! : graphicColorBottom!);
+          currentFgColor = (row <= 4 ? graphicColorTop! : graphicColorBottom!);
         } else if (numColors === 5) {
           if (row === 0 || row === 1) {
             currentBgColor = bgColor1!;
@@ -687,13 +666,11 @@ const fetchedGlyphs = glyphsData
           const blockIndex = blockRow * 3 + blockCol;
           const block = blockAssignments![blockIndex];
           currentBgColor = block.bgColor;
-          currentFgColor = isTypoGlyph(row, col) ? typoColor! : block.fgColor;
+          currentFgColor = block.fgColor;
         } else if (numColors === 8) {
           const randomColors = availableColors.filter((c) => c !== typoColor);
           currentBgColor = randomColors[Math.floor(Math.random() * randomColors.length)];
-          currentFgColor = isTypoGlyph(row, col)
-            ? typoColor!
-            : randomColors[Math.floor(Math.random() * randomColors.length)];
+          currentFgColor = randomColors[Math.floor(Math.random() * randomColors.length)];
           usedColors.add(currentBgColor);
           usedColors.add(currentFgColor);
         } else if (numColors >= 9) {
@@ -729,7 +706,7 @@ const fetchedGlyphs = glyphsData
               newFgGlyphs[i] = frameGlyphsU[1].id;
             }
           } else {
-            if ((row === 0 && col === 0) || (row === 0 && col === 8) || (row === 8 && col === 0) || (row === 8 && col === 8)) {
+            if ((row === 0 && col === 0) || (row === 0 && col === 8) || (row === 8 && col == 0) || (row === 8 && col === 8)) {
               newFgGlyphs[i] = cornerGlyph.id;
             } else {
               newFgGlyphs[i] = edgeGlyphs[Math.floor(Math.random() * edgeGlyphs.length)]?.id || cornerGlyph.id;
@@ -754,19 +731,34 @@ const fetchedGlyphs = glyphsData
           }
         }
 
-        if (row >= 1 && row <= 7 && (col === 1 || col >= 2)) {
-          if (complexity === 1) {
-            if (row === typoRow) {
-              const colToLetterIdx = [1, 2, 3, 4, 5, 6, 7].indexOf(col);
-              newFgGlyphs[i] = variation1[colToLetterIdx];
+       if (row >= 1 && row <= 7 && (col === 1 || col >= 2)) {
+        if (isInitialGeneration || complexity === 1) {
+          if (isInitialGeneration || !isVertical) {
+            if (row === newTypoRow) {
+              // Horizontal BASE starting at newTypoCol
+              const colToLetterIdx = [newTypoCol, newTypoCol + 1, newTypoCol + 2, newTypoCol + 3].indexOf(col);
+              if (colToLetterIdx >= 0 && col <= 7) {
+                newFgGlyphs[i] = variationBase[colToLetterIdx]; // B, A, S, E
+              } else {
+                newFgGlyphs[i] = getRandomGraphicGlyph();
+              }
             } else {
               newFgGlyphs[i] = getRandomGraphicGlyph();
             }
-            newFgColors[i] = currentFgColor;
-            newBgGlyphs[i] = 1;
-            newBgColors[i] = currentBgColor;
+          } else {
+            // Vertical BASE in column newTypoCol, starting at newTypoRow
+            if (col === newTypoCol && row >= newTypoRow && row < newTypoRow + 4) {
+              const rowToLetterIdx = row - newTypoRow; // Rows newTypoRow to newTypoRow+3 for B, A, S, E
+              newFgGlyphs[i] = variationBase[rowToLetterIdx];
+            } else {
+              newFgGlyphs[i] = getRandomGraphicGlyph();
+            }
+          }
+          newFgColors[i] = currentFgColor;
+          newBgGlyphs[i] = 1;
+          newBgColors[i] = currentBgColor;
           } else if (complexity === 2) {
-            if (row === typoRow) {
+            if (row === newTypoRow) {
               const colToLetterIdx = [1, 2, 3, 4, 5, 6, 7].indexOf(col);
               newFgGlyphs[i] = variation1[colToLetterIdx];
             } else {
@@ -776,7 +768,7 @@ const fetchedGlyphs = glyphsData
             newBgGlyphs[i] = 1;
             newBgColors[i] = currentBgColor;
           } else if (complexity === 3) {
-            if (col === typoCol) {
+            if (col === newTypoCol) {
               const rowToLetterIdx = row - 1;
               newFgGlyphs[i] = variation1[rowToLetterIdx];
             } else {
@@ -804,7 +796,7 @@ const fetchedGlyphs = glyphsData
             newBgGlyphs[i] = 1;
             newBgColors[i] = currentBgColor;
           } else if (complexity === 5) {
-            if (col === typoCol) {
+            if (col === newTypoCol) {
               const rowToLetterIdx = row - 1;
               newFgGlyphs[i] = variation1[rowToLetterIdx];
             } else {
@@ -829,7 +821,7 @@ const fetchedGlyphs = glyphsData
             newBgGlyphs[i] = 1;
             newBgColors[i] = currentBgColor;
           } else if (complexity === 7) {
-            if (row === typoRow && col >= 1 && col <= 4) {
+            if (row === newTypoRow && col >= 1 && col <= 4) {
               const colToLetterIdx = col - 1;
               newFgGlyphs[i] = variationBase[colToLetterIdx];
             } else {
@@ -843,10 +835,10 @@ const fetchedGlyphs = glyphsData
             newBgColors[i] = currentBgColor;
           } else if (complexity === 8) {
             if ([2, 4, 6].includes(row)) {
-              if (row === typoRow && col >= 1 && col <= 4) {
+              if (row === newTypoRow && col >= 1 && col <= 4) {
                 const colToLetterIdx = col - 1;
                 newFgGlyphs[i] = variationBase[colToLetterIdx];
-              } else if (row === typoRow2 && col >= 1 && col <= 7) {
+              } else if (row === newTypoRow2 && col >= 1 && col <= 7) {
                 const colToLetterIdx = [1, 2, 3, 4, 5, 6, 7].indexOf(col);
                 newFgGlyphs[i] = variation1[colToLetterIdx];
               } else {
@@ -877,7 +869,7 @@ const fetchedGlyphs = glyphsData
             newBgGlyphs[i] = 1;
             newBgColors[i] = currentBgColor;
           } else if (complexity === 10) {
-            if (row >= 1 && row <= 7 && col === typoCols[row - 1]) {
+            if (row >= 1 && row <= 7 && newTypoCols[row - 1] && col === newTypoCols[row - 1]) {
               const rowToLetterIdx = row - 1;
               newFgGlyphs[i] = variation1[rowToLetterIdx];
             } else {
@@ -933,7 +925,7 @@ const fetchedGlyphs = glyphsData
     localStorage.setItem("bgColors", JSON.stringify(newBgColors));
     localStorage.setItem("fgColors", JSON.stringify(newFgColors));
     setHasGenerated(true);
-  }, [complexity, glyphCount, selectedColors, stableGlyphs, typoRow, typoRow2, typoCol, typoCols, isTypoGlyph]);
+  }, [complexity, glyphCount, selectedColors, stableGlyphs, typoRow, typoRow2, typoCol, typoCols]);
 
   useEffect(() => {
     const shouldGenerate = localStorage.getItem("shouldGenerateArt") === "true";
@@ -1032,14 +1024,6 @@ const fetchedGlyphs = glyphsData
       const idx = y * 9 + x;
       if (idx < 0 || idx >= 81) return;
 
-      const row = y;
-      const col = x;
-
-      if (isTypoGlyph(row, col)) {
-        console.log(`Cannot modify typo glyph at index ${idx} (row ${row}, col ${col})`);
-        return;
-      }
-
       const availableColors = selectedColors.map((idx) => idx + 1);
       const newBgColors = [...bgColors];
       const newFgColors = [...fgColors];
@@ -1096,7 +1080,7 @@ const fetchedGlyphs = glyphsData
       localStorage.setItem("fgColors", JSON.stringify(newFgColors));
       localStorage.setItem("fgGlyphs", JSON.stringify(newFgGlyphs));
     },
-    [bgColors, fgColors, fgGlyphs, selectedColors, hasGenerated, selectedGlyph, stableGlyphs, isTypoGlyph]
+    [bgColors, fgColors, fgGlyphs, selectedColors, hasGenerated, selectedGlyph, stableGlyphs]
   );
 
   const handleKeyDown = useCallback(
@@ -1208,9 +1192,9 @@ const fetchedGlyphs = glyphsData
             >
               <div className="bg-white p-4 max-w-[80%] text-center">
                 <ul className="text-sm text-black list-disc ml-4 space-y-2 text-left">
-                  <li>Tap to change glyph color.</li>
+                  <li>Tap to change glyph color or place selected glyph.</li>
                   <li>Double-tap or Shift+click to change background color.</li>
-                  <li>Press 0–9 to draw glyphs 1–10.</li>
+                  <li>Use buttons below or press 0–9 to select glyphs 1–10.</li>
                   <li>
                     <RefreshCw size={16} className="inline mr-2" /> Randomize pattern.
                   </li>
@@ -1261,6 +1245,33 @@ const fetchedGlyphs = glyphsData
           >
             <Droplet size={16} className="mr-2 inline" />
           </button>
+          <div className="flex w-full">
+            {Array.from({ length: 10 }, (_, i) => {
+              const glyphId = i === 9 ? 10 : i + 1;
+              return (
+                <button
+                  key={glyphId}
+                  onClick={() => {
+                    const glyphExists = stableGlyphs.some((g) => g.id === glyphId);
+                    if (glyphExists) {
+                      setSelectedGlyph(glyphId);
+                      console.log(`Selected glyph ${glyphId}`);
+                    } else {
+                      console.log(`Glyph ID ${glyphId} not available`);
+                    }
+                  }}
+                  className={`flex-1 py-2 text-base text-white transition-colors ${
+                    selectedGlyph === glyphId
+                      ? "bg-blue-600"
+                      : "bg-gray-500 hover:bg-gray-600"
+                  } ${i === 0 ? "rounded-l-none" : i === 9 ? "rounded-r-none" : ""}`}
+                  disabled={!hasGenerated || selectedColors.length < 2}
+                >
+                  {glyphId}
+                </button>
+              );
+            })}
+          </div>
           <div className="flex space-x-2">
             <button
               onClick={() => setPage(1)}
