@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useAccount, useSwitchChain, useWriteContract } from 'wagmi';
 import { useQuery } from '@apollo/client';
 import { ethers } from 'ethers';
 import Header from '../components/Header';

@@ -116,7 +116,7 @@ export default function Create() {
   if (!isMounted) return null;
 
   return (
-    <div className="flex flex-col min-h-screen font-sans text-[var(--app-foreground)] mini-app-theme from-[var(--app-background)] to-[var(--app-gray)]">
+    <div className="flex flex-col min-h-screen font-sans text-[#111111] mini-app-theme bg-[#ffffff]">
       <div className="w-full max-w-md mx-auto px-4 py-3">
         <Header />
         <div
