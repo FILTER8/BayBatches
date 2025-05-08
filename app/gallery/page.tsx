@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@apollo/client';
 import { ethers } from 'ethers';
+import { useSwipeable } from 'react-swipeable';
+import { ArrowLeftCircle, ArrowRightCircle } from '@geist-ui/icons';
 import Header from '../components/Header';
 import { PageFooter } from '../components/PageContent';
 import MemoizedNFTImage from '../components/NFTImage';
@@ -65,7 +67,7 @@ export default function Gallery() {
   const [visibleEditions, setVisibleEditions] = useState<string[]>([]);
   const [allEditions, setAllEditions] = useState<Edition[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [selectedEdition, setSelectedEdition] = useState<Edition | null>(null);
+  const [selectedEditionIndex, setSelectedEditionIndex] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { data: graphData, loading: graphLoading, error: graphError, startPolling, stopPolling } = useQuery<GraphData>(ALL_EDITIONS_QUERY, {
@@ -160,16 +162,53 @@ export default function Gallery() {
   const filteredEditions = useMemo(() => allEditions, [allEditions]);
   const isLoading = graphLoading || isProcessing;
 
+  const navigateToNextEdition = () => {
+    if (selectedEditionIndex === null || filteredEditions.length === 0) return;
+    const nextIndex = (selectedEditionIndex + 1) % filteredEditions.length;
+    setSelectedEditionIndex(nextIndex);
+  };
+
+  const navigateToPreviousEdition = () => {
+    if (selectedEditionIndex === null || filteredEditions.length === 0) return;
+    const prevIndex = (selectedEditionIndex - 1 + filteredEditions.length) % filteredEditions.length;
+    setSelectedEditionIndex(prevIndex);
+  };
+
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: () => navigateToNextEdition(),
+    onSwipedRight: () => navigateToPreviousEdition(),
+    trackMouse: true,
+  });
+
+  const selectedEdition = selectedEditionIndex !== null ? filteredEditions[selectedEditionIndex] : null;
+
   return (
     <div className="flex flex-col min-h-screen font-sans text-[#111111] mini-app-theme bg-[#ffffff]">
       <div className="w-full max-w-md mx-auto px-4 py-3 sticky top-0 z-10 bg-[#ffffff]">
         <Header />
         <div
-          className="w-full h-11 flex items-center justify-center text-white text-sm tracking-[0.1em] mb-3 cursor-pointer"
-          style={{ backgroundColor: '#e096b6' }}
-          onClick={() => setSelectedEdition(null)}
+                  className="w-full h-11 flex items-center justify-between text-white text-sm tracking-[0.1em] mb-3 cursor-pointer bg-[#e096b6] px-4"
+          onClick={() => setSelectedEditionIndex(null)}
         >
-          GALLERY
+          {selectedEdition && (
+            <ArrowLeftCircle
+              className="w-6 h-6 text-white cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigateToPreviousEdition();
+              }}
+            />
+          )}
+          <span className="flex-grow text-center">GALLERY</span>
+          {selectedEdition && (
+            <ArrowRightCircle
+              className="w-6 h-6 text-white cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigateToNextEdition();
+              }}
+            />
+          )}
         </div>
       </div>
 
@@ -185,7 +224,9 @@ export default function Gallery() {
           </div>
         )}
         {selectedEdition ? (
-          <TokenDetail edition={selectedEdition} />
+          <div {...swipeHandlers}>
+            <TokenDetail edition={selectedEdition} />
+          </div>
         ) : isLoading ? (
           <div className="flex justify-center mt-4">
             <svg
@@ -224,7 +265,10 @@ export default function Gallery() {
                   {visibleEditions.includes(edition.id) ? (
                     <div
                       className="cursor-pointer pointer-events-auto"
-                      onClick={() => setSelectedEdition(edition)}
+                      onClick={() => {
+                        const index = filteredEditions.findIndex((e) => e.id === edition.id);
+                        setSelectedEditionIndex(index);
+                      }}
                     >
                       <MemoizedNFTImage address={edition.id} tokenId={1} alchemyUrl={ALCHEMY_URL} />
                     </div>
