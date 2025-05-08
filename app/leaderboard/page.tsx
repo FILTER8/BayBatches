@@ -74,7 +74,7 @@ export default function LeaderboardPage() {
       .map((user) => ({
         walletAddress: user.id,
         username: profiles[user.id]?.username || user.id.slice(0, 6),
-        avatarUrl: profiles[user.id]?.avatarUrl || 'https://default-avatar.png',
+        avatarUrl: profiles[user.id]?.avatarUrl || 'https://bay-batches.vercel.app/splashicon.png',
         tokensOwnedCount: user.tokensOwned?.length || 0,
         editionsCreatedCount: user.editionsCreated?.length || 0,
       }))
@@ -87,7 +87,7 @@ export default function LeaderboardPage() {
       .map((user) => ({
         walletAddress: user.id,
         username: profiles[user.id]?.username || user.id.slice(0, 6),
-        avatarUrl: profiles[user.id]?.avatarUrl || 'https://default-avatar.png',
+        avatarUrl: profiles[user.id]?.avatarUrl || 'https://bay-batches.vercel.app/splashicon.png',
         tokensOwnedCount: user.tokensOwned?.length || 0,
         editionsCreatedCount: user.editionsCreated?.length || 0,
       }))

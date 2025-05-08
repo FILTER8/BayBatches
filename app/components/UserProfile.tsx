@@ -161,7 +161,7 @@ export function UserProfile({ walletAddress, username, avatarUrl }: UserProfileP
       </div>
       <div className="flex items-center gap-2 mt-2">
         <Image
-          src={avatarUrl || 'https://default-avatar.png'}
+          src={avatarUrl || 'https://bay-batches.vercel.app/splashicon.png'}
           alt={username}
           width={48}
           height={48}

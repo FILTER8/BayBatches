@@ -26,7 +26,7 @@ export function Leaderboard({ mostCollected, mostCreated }: LeaderboardProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="sticky top-[44px] z-30 flex justify-center py-1 bg-white">
+      <div className="sticky top-[44px] z-30 flex justify-center py-1 ">
         <button
           onClick={() => setTab('collected')}
           className="w-full h-11 flex items-center justify-center text-sm"
@@ -55,7 +55,7 @@ export function Leaderboard({ mostCollected, mostCreated }: LeaderboardProps) {
           entries.map((entry) => (
             <div
               key={entry.walletAddress}
-              className="flex items-center gap-2 p-2 w-full h-11 bg-white border border-gray-300 cursor-pointer hover:bg-gray-100"
+              className="flex items-center gap-2 p-2 w-full h-11 border border-gray-300 cursor-pointer hover:bg-gray-100"
               onClick={() => router.push(`/user/${entry.walletAddress}`)}
             >
               <Image

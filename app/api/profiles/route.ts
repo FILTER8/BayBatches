@@ -92,7 +92,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       username: user.username || address.slice(0, 6),
       display_name: user.display_name || user.username || address.slice(0, 6),
-      pfp_url: user.pfp_url || '/default-avatar.png',
+      pfp_url: user.pfp_url || '/splashicon.png',
       address: user.verifications?.[0] || address,
     });
   } catch (error) {
@@ -131,7 +131,7 @@ export async function POST(request: Request) {
         acc[address] = {
           username: user.username || address.slice(0, 6),
           display_name: user.display_name || user.username || address.slice(0, 6),
-          pfp_url: user.pfp_url || '/default-avatar.png',
+          pfp_url: user.pfp_url || '/splashicon.png',
           address,
         };
       }

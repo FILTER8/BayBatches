@@ -20,7 +20,7 @@ export async function getUserProfile(walletAddress: string) {
     const user: UserProfile | null = await response.json();
     const profile = {
       username: user?.username || user?.display_name || walletAddress.slice(0, 6),
-      avatarUrl: user?.pfp_url || 'https://splashicon.png',
+      avatarUrl: user?.pfp_url || 'https://bay-batches.vercel.app/splashicon.png',
     };
     profileCache.set(lowerAddress, profile);
     return profile;
@@ -50,7 +50,7 @@ export async function getUserProfiles(walletAddresses: string[]): Promise<Record
     for (const [address, user] of Object.entries(profiles) as [string, UserProfile][]) {
       profileCache.set(address, {
         username: user.username || user.display_name || address.slice(0, 6),
-        avatarUrl: user.pfp_url || 'https://splashicon.png',
+        avatarUrl: user.pfp_url || 'https://bay-batches.vercel.app/splashicon.png',
       });
     }
     return Object.fromEntries(
@@ -58,7 +58,7 @@ export async function getUserProfiles(walletAddresses: string[]): Promise<Record
         address,
         {
           username: user.username || user.display_name || address.slice(0, 6),
-          avatarUrl: user.pfp_url || 'https://splashicon.png',
+          avatarUrl: user.pfp_url || 'https://bay-batches.vercel.app/splashicon.png',
         },
       ])
     );
