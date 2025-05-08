@@ -745,15 +745,15 @@ function ArtGeneration({ setPage }: { setPage: (page: number) => void }) {
             } else {
               newFgGlyphs[i] = getRandomGraphicGlyph();
             }
-          } else {
-            // Vertical BASE in column newTypoCol, starting at newTypoRow
-            if (col === newTypoCol && row >= newTypoRow && row < newTypoRow + 4) {
-              const rowToLetterIdx = row - newTypoRow; // Rows newTypoRow to newTypoRow+3 for B, A, S, E
-              newFgGlyphs[i] = variationBase[rowToLetterIdx];
-            } else {
-              newFgGlyphs[i] = getRandomGraphicGlyph();
-            }
-          }
+       } else {
+  // Vertical BASE in column newTypoCol, starting at newTypoRow
+  if (col === newTypoCol && newTypoRow !== null && row >= newTypoRow && row < newTypoRow + 4) {
+    const rowToLetterIdx = row - newTypoRow; // Rows newTypoRow to newTypoRow+3 for B, A, S, E
+    newFgGlyphs[i] = variationBase[rowToLetterIdx];
+  } else {
+    newFgGlyphs[i] = getRandomGraphicGlyph();
+  }
+}
           newFgColors[i] = currentFgColor;
           newBgGlyphs[i] = 1;
           newBgColors[i] = currentBgColor;
