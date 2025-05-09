@@ -1322,7 +1322,7 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
   const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient({ chainId: baseSepolia.id });
   const { isConnected } = useAccount();
-  const { connectors,connect } = useConnect();
+  const { connectors, connect } = useConnect();
   const [name, setName] = useState('BaseBatch');
   const [symbol, setSymbol] = useState('BBART');
   const [description, setDescription] = useState('This Artwork was made in a shared moment of creation Minted during BayBatches on Base');
@@ -1333,120 +1333,50 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
   const [artTxHash, setArtTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>('');
-  const [manualReceipt, setManualReceipt] = useState<ethers.TransactionReceipt | WagmiTransactionReceipt | null>(null);
   const [isClient, setIsClient] = useState(false);
-  const ALCHEMY_URL = process.env.NEXT_PUBLIC_ALCHEMY_URL || '';
 
-  const provider = useMemo(() => {
-    const apiKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY;
-    if (!apiKey) {
-      console.error('NEXT_PUBLIC_ALCHEMY_API_KEY is missing');
-      return new ethers.JsonRpcProvider('https://sepolia.base.org');
-    }
-    return new ethers.JsonRpcProvider(`https://base-sepolia.g.alchemy.com/v2/${apiKey}`);
-  }, []);
+  const ALCHEMY_URL = process.env.NEXT_PUBLIC_ALCHEMY_URL || '';
+  const provider = useMemo(() => new ethers.JsonRpcProvider(
+    process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
+      ? `https://base-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
+      : 'https://sepolia.base.org'
+  ), []);
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
-
-  useEffect(() => {
-    console.log('Alchemy API Key:', process.env.NEXT_PUBLIC_ALCHEMY_API_KEY);
     provider.getNetwork().then(net => {
-      console.log('Current chainId:', net.chainId);
       if (Number(net.chainId) !== baseSepolia.id) {
-        console.error('Wrong chain! Expected:', baseSepolia.id, 'Got:', net.chainId);
+        setError(`Wrong network! Please switch to Base Sepolia (Chain ID: ${baseSepolia.id})`);
       }
     }).catch(err => {
-      console.error('Failed to get chainId:', err);
+      setError('Failed to verify network: ' + err.message);
     });
   }, [provider]);
 
-  const { data: receipt, error: receiptError, status: receiptStatus } = useWaitForTransactionReceipt({
+  const { data: receipt, error: receiptError } = useWaitForTransactionReceipt({
     hash: txHash as `0x${string}`,
     chainId: baseSepolia.id,
-    pollingInterval: 1000,
-    timeout: 60000,
+    pollingInterval: 2000,
+    timeout: 120000,
   });
+
   const { data: artReceipt } = useWaitForTransactionReceipt({
     hash: artTxHash as `0x${string}`,
     chainId: baseSepolia.id,
+    pollingInterval: 2000,
+    timeout: 120000,
   });
 
   useEffect(() => {
-    console.log('useWaitForTransactionReceipt:', {
-      txHash,
-      receipt,
-      receiptError,
-      receiptStatus,
-      artTxHash,
-      artReceipt,
-    });
-  }, [txHash, receipt, receiptError, receiptStatus, artTxHash, artReceipt]);
-
-  useEffect(() => {
-    if (txHash && !manualReceipt && !receipt) {
-      console.log('Manually fetching receipt for txHash:', txHash);
-      const fetchReceipt = async (attempt = 1, maxAttempts = 5) => {
-        try {
-          let manualReceipt: ethers.TransactionReceipt | WagmiTransactionReceipt | null = await callWithRetry(() => provider.getTransactionReceipt(txHash));
-          if (manualReceipt) {
-            console.log('Manually fetched receipt (ethers):', manualReceipt);
-            setManualReceipt(manualReceipt);
-            return;
-          }
-          if (publicClient) {
-            manualReceipt = await callWithRetry(() => publicClient.getTransactionReceipt({ hash: txHash as `0x${string}` }));
-            console.log('Manually fetched receipt (wagmi):', manualReceipt);
-            if (manualReceipt) {
-              setManualReceipt(manualReceipt);
-              return;
-            }
-          }
-          if (attempt < maxAttempts) {
-            console.log(`Receipt not found, retrying (${attempt}/${maxAttempts})...`);
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            await fetchReceipt(attempt + 1, maxAttempts);
-          } else {
-            console.error('Failed to fetch receipt after max attempts');
-          }
-        } catch (err) {
-          console.error('Failed to fetch receipt:', err);
-          if (attempt < maxAttempts) {
-            console.log(`Receipt fetch failed, retrying (${attempt}/${maxAttempts})...`);
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            await fetchReceipt(attempt + 1, maxAttempts);
-          } else {
-            console.error('Failed to fetch receipt after max attempts:', err);
-          }
-        }
-      };
-      fetchReceipt();
-    }
-  }, [txHash, manualReceipt, receipt, provider, publicClient]);
-
-  useEffect(() => {
-    const activeReceipt = receipt || manualReceipt;
-    console.log('useEffect triggered with:', {
-      activeReceipt,
-      txHash,
-      editionAddress,
-      address,
-      editionSize,
-      writeContractAsync: !!writeContractAsync,
-      provider: !!provider,
-    });
-    if (activeReceipt && !editionAddress && txHash) {
-      console.log('Processing receipt:', activeReceipt);
-      const editionCreatedLog = activeReceipt.logs.find(
-        (log) =>
-          log.address.toLowerCase() === FACTORY_ADDRESS.toLowerCase() &&
-          log.topics[0] === ethers.id('EditionCreated(address,address)')
+    if (receipt && !editionAddress && txHash) {
+      console.log('Received createEdition receipt:', receipt);
+      const editionCreatedLog = receipt.logs.find(
+        log => log.address.toLowerCase() === FACTORY_ADDRESS.toLowerCase() &&
+               log.topics[0] === ethers.id('EditionCreated(address,address)')
       );
-      console.log('EditionCreated log:', editionCreatedLog);
+
       if (!editionCreatedLog) {
-        console.error('EditionCreated event not found');
-        setError('Failed to find edition address');
+        setError('Failed to find EditionCreated event');
         setIsCreating(false);
         setStatusMessage('');
         return;
@@ -1454,29 +1384,15 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
 
       const newEdition = '0x' + editionCreatedLog.topics[2].slice(-40);
       setEditionAddress(newEdition);
+      setStatusMessage('Step 1/2: Edition created, setting artwork...');
+      console.log(`Edition created at ${newEdition}, proceeding to setBaseArt`);
+
       const setBaseArt = async () => {
         try {
-          console.log('Starting setBaseArt for edition:', newEdition);
-          setStatusMessage('Step 2/2: Setting artwork...');
           const bgGlyphsRaw = JSON.parse(localStorage.getItem('bgGlyphs') || '[]');
           const fgGlyphsRaw = JSON.parse(localStorage.getItem('fgGlyphs') || '[]');
           const bgColorsRaw = JSON.parse(localStorage.getItem('bgColors') || '[]');
           const fgColorsRaw = JSON.parse(localStorage.getItem('fgColors') || '[]');
-
-          console.log('Raw localStorage data:', {
-            bgGlyphsRaw,
-            fgGlyphsRaw,
-            bgColorsRaw,
-            fgColorsRaw,
-            bgGlyphsLength: bgGlyphsRaw.length,
-            fgGlyphsLength: fgGlyphsRaw.length,
-            bgColorsLength: bgColorsRaw.length,
-            fgColorsLength: fgColorsRaw.length,
-            bgGlyphsValid: bgGlyphsRaw.every((g: number) => typeof g === 'number' && g >= 1),
-            fgGlyphsValid: fgGlyphsRaw.every((g: number | null) => g === null || (typeof g === 'number' && g >= 1)),
-            bgColorsValid: bgColorsRaw.every((c: number) => typeof c === 'number' && c >= 1 && c <= COLORS.length),
-            fgColorsValid: fgColorsRaw.every((c: number | null) => c === null || (typeof c === 'number' && c >= 0 && c <= COLORS.length)),
-          });
 
           if (
             !Array.isArray(bgGlyphsRaw) ||
@@ -1492,18 +1408,16 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
             !fgGlyphsRaw.every((g: number | null) => g === null || (typeof g === 'number' && g >= 1)) ||
             !fgColorsRaw.every((c: number | null) => c === null || (typeof c === 'number' && c >= 0 && c <= COLORS.length))
           ) {
-            throw new Error('Invalid or missing canvas state in localStorage');
+            throw new Error('Invalid canvas state');
           }
 
           const bgGlyphs = bgGlyphsRaw.map((g: number) => g);
           const fgGlyphs = fgGlyphsRaw.map((g: number | null) => g ?? 0);
-
           const usedColorIndices = new Set<number>(
             [...bgColorsRaw, ...fgColorsRaw].filter((c) => c !== null && c > 0)
           );
           const usedColors: number[] = [];
           const colorMap: { [oldIdx: number]: number } = {};
-
           const sortedUsedIndices = Array.from(usedColorIndices).sort((a, b) => a - b);
           sortedUsedIndices.forEach((oldIdx, newIdx) => {
             colorMap[oldIdx] = newIdx + 1;
@@ -1517,18 +1431,6 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
             c !== null && colorMap[c] ? colorMap[c] : 0
           );
 
-          const newColors = usedColors;
-
-          console.log('Processed data for setBaseArt:', {
-            bgGlyphs,
-            fgGlyphs,
-            remappedBgColors,
-            remappedFgColors,
-            newColors,
-            colorMap,
-            usedColorIndices: sortedUsedIndices,
-          });
-
           const config = {
             address: newEdition as `0x${string}`,
             abi: editionAbi.abi,
@@ -1538,7 +1440,7 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
               fgGlyphs,
               remappedBgColors,
               remappedFgColors,
-              newColors,
+              usedColors,
               false,
               ethers.ZeroAddress,
               ethers.ZeroAddress,
@@ -1548,111 +1450,79 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
             ],
           };
 
-          const contract = new ethers.Contract(newEdition, editionAbi.abi, provider);
-          const gasEstimate = await callWithRetry(() =>
-            contract.setBaseArt.estimateGas(
-              bgGlyphs,
-              fgGlyphs,
-              remappedBgColors,
-              remappedFgColors,
-              newColors,
-              false,
-              ethers.ZeroAddress,
-              ethers.ZeroAddress,
-              true,
-              0,
-              GLYPH_SET_ADDRESS,
-              { from: address }
-            )
-          ).catch((err) => {
+          const gasEstimate = await publicClient.estimateContractGas({
+            ...config,
+            account: address as `0x${string}`,
+          }).catch(err => {
             throw new Error('Gas estimation failed: ' + err.message);
           });
 
-          const gasWithBuffer = (gasEstimate * BigInt(120)) / BigInt(100);
+          const gasWithBuffer = (gasEstimate * BigInt(110)) / BigInt(100);
+          const { maxFeePerGas, maxPriorityFeePerGas } = await publicClient.estimateFeesPerGas();
+          const adjustedMaxFeePerGas = (maxFeePerGas * BigInt(120)) / BigInt(100);
+          const adjustedMaxPriorityFeePerGas = (maxPriorityFeePerGas * BigInt(120)) / BigInt(100);
 
-          let maxFeePerGas, maxPriorityFeePerGas;
-          try {
-            const gasFeeData = await callWithRetry(() => provider.getFeeData());
-            maxFeePerGas = gasFeeData.maxFeePerGas
-              ? (gasFeeData.maxFeePerGas * BigInt(150)) / BigInt(100)
-              : BigInt('50000000000'); // Fallback: 50 Gwei
-            maxPriorityFeePerGas = gasFeeData.maxPriorityFeePerGas
-              ? (gasFeeData.maxPriorityFeePerGas * BigInt(150)) / BigInt(100)
-              : BigInt('2000000000'); // Fallback: 2 Gwei
-          } catch (err) {
-            console.error('Failed to fetch gas fee data for setBaseArt:', err);
-            if (publicClient) {
-              const gasFeeData = await callWithRetry(() => publicClient.estimateFeesPerGas());
-              maxFeePerGas = gasFeeData.maxFeePerGas
-                ? (gasFeeData.maxFeePerGas * BigInt(150)) / BigInt(100)
-                : BigInt('50000000000');
-              maxPriorityFeePerGas = gasFeeData.maxPriorityFeePerGas
-                ? (gasFeeData.maxPriorityFeePerGas * BigInt(150)) / BigInt(100)
-                : BigInt('2000000000');
-            } else {
-              console.warn('Using fallback gas values for setBaseArt');
-              maxFeePerGas = BigInt('50000000000');
-              maxPriorityFeePerGas = BigInt('2000000000');
-            }
-          }
-
-          const artTx = await callWithRetry(() =>
-            writeContractAsync({
-              ...config,
-              gas: gasWithBuffer,
-              maxFeePerGas,
-              maxPriorityFeePerGas,
-            })
-          ).catch(err => {
-            throw new Error('setBaseArt transaction failed: ' + err.message);
+          console.log('Submitting setBaseArt transaction:', config);
+          const artTx = await writeContractAsync({
+            ...config,
+            gas: gasWithBuffer,
+            maxFeePerGas: adjustedMaxFeePerGas,
+            maxPriorityFeePerGas: adjustedMaxPriorityFeePerGas,
           });
-          console.log('setBaseArt txHash:', artTx);
+
           setArtTxHash(artTx);
           setStatusMessage('Edition created successfully!');
+          console.log(`setBaseArt transaction submitted: ${artTx}`);
           setTimeout(() => {
             setIsCreating(false);
             setStatusMessage('');
           }, 2000);
-      } catch (error: unknown) {
-  console.error('Create edition failed:', error);
-  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-  setError(`Failed to create edition: ${errorMessage}`);
-  setIsCreating(false);
-  setStatusMessage('');
-}
+        } catch (err) {
+          setError('Failed to set artwork: ' + (err instanceof Error ? err.message : 'Unknown error'));
+          setIsCreating(false);
+          setStatusMessage('');
+          console.error('setBaseArt failed:', err);
+        }
       };
 
       setBaseArt();
     }
-  }, [receipt, manualReceipt, txHash, writeContractAsync, address, editionSize, provider, publicClient, editionAddress, setError, setIsCreating, setStatusMessage]);
+
+    if (receiptError) {
+      setError('Transaction failed: ' + receiptError.message);
+      setIsCreating(false);
+      setStatusMessage('');
+      console.error('createEdition receipt error:', receiptError);
+    }
+  }, [receipt, receiptError, txHash, editionAddress, address, writeContractAsync, publicClient]);
+
+  useEffect(() => {
+    if (artReceipt) {
+      console.log('Received setBaseArt receipt:', artReceipt);
+    }
+  }, [artReceipt]);
 
   const createEdition = async () => {
-  if (!isConnected) {
-  try {
-    const walletButton = document.querySelector('.wallet-btn');
-    if (walletButton) {
-      (walletButton as HTMLElement).click();
-    } else {
-      const connector = connectors[0];
-      if (connector) {
-        await connect({ connector });
-      } else {
-        throw new Error('No wallet connectors available');
+    if (!isConnected) {
+      try {
+        const connector = connectors[0];
+        if (connector) {
+          await connect({ connector });
+        } else {
+          throw new Error('No wallet connectors available');
+        }
+      } catch (err) {
+        setError('Failed to connect wallet: ' + (err instanceof Error ? err.message : 'Unknown error'));
+        console.error('Wallet connection failed:', err);
       }
+      return;
     }
-  } catch (err: unknown) {
-    console.error('Failed to trigger wallet connection:', err);
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-    setError(`Failed to connect wallet: ${errorMessage}`);
-    return;
-  }
-  return;
-}
 
     if (!address || isCreating) return;
     setIsCreating(true);
     setError(null);
-    setStatusMessage('Creating edition, please confirm transactions...');
+    setStatusMessage('Creating edition, please confirm transaction...');
+
     try {
       if (!name.trim()) throw new Error('Name is required');
       if (!symbol.trim()) throw new Error('Symbol is required');
@@ -1676,67 +1546,34 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
         value: BigInt('500000000000000'),
       };
 
-      const contract = new ethers.Contract(FACTORY_ADDRESS, factoryAbi.abi, provider);
-      const gasEstimate = await callWithRetry(() =>
-        contract.createEdition.estimateGas(
-          name,
-          symbol,
-          description,
-          editionSize,
-          BigInt(0),
-          BigInt(LAUNCHPAD_FEE),
-          LAUNCHPAD_FEE_RECEIVER,
-          MARKETPLACE_FEE_RECEIVER,
-          { from: address, value: BigInt('500000000000000') }
-        )
-      ).catch((err) => {
+      const gasEstimate = await publicClient.estimateContractGas({
+        ...config,
+        account: address as `0x${string}`,
+      }).catch(err => {
         throw new Error('Gas estimation failed: ' + err.message);
       });
-      const gasWithBuffer = (gasEstimate * BigInt(120)) / BigInt(100);
 
-      let maxFeePerGas, maxPriorityFeePerGas;
-      try {
-        const gasFeeData = await callWithRetry(() => provider.getFeeData());
-        maxFeePerGas = gasFeeData.maxFeePerGas
-          ? (gasFeeData.maxFeePerGas * BigInt(150)) / BigInt(100)
-          : BigInt('50000000000'); // Fallback: 50 Gwei
-        maxPriorityFeePerGas = gasFeeData.maxPriorityFeePerGas
-          ? (gasFeeData.maxPriorityFeePerGas * BigInt(150)) / BigInt(100)
-          : BigInt('2000000000'); // Fallback: 2 Gwei
-      } catch (err) {
-        console.error('Failed to fetch gas fee data for createEdition:', err);
-        if (publicClient) {
-          const gasFeeData = await callWithRetry(() => publicClient.estimateFeesPerGas());
-          maxFeePerGas = gasFeeData.maxFeePerGas
-            ? (gasFeeData.maxFeePerGas * BigInt(150)) / BigInt(100)
-            : BigInt('50000000000');
-          maxPriorityFeePerGas = gasFeeData.maxPriorityFeePerGas
-            ? (gasFeeData.maxPriorityFeePerGas * BigInt(150)) / BigInt(100)
-            : BigInt('2000000000');
-        } else {
-          console.warn('Using fallback gas values for createEdition');
-          maxFeePerGas = BigInt('50000000000');
-          maxPriorityFeePerGas = BigInt('2000000000');
-        }
-      }
+      const gasWithBuffer = (gasEstimate * BigInt(110)) / BigInt(100);
+      const { maxFeePerGas, maxPriorityFeePerGas } = await publicClient.estimateFeesPerGas();
+      const adjustedMaxFeePerGas = (maxFeePerGas * BigInt(120)) / BigInt(100);
+      const adjustedMaxPriorityFeePerGas = (maxPriorityFeePerGas * BigInt(120)) / BigInt(100);
 
-      const createTx = await callWithRetry(() =>
-        writeContractAsync({
-          ...config,
-          gas: gasWithBuffer,
-          maxFeePerGas,
-          maxPriorityFeePerGas,
-        })
-      );
-      console.log('createEdition txHash:', createTx);
+      console.log('Submitting createEdition transaction:', config);
+      const createTx = await writeContractAsync({
+        ...config,
+        gas: gasWithBuffer,
+        maxFeePerGas: adjustedMaxFeePerGas,
+        maxPriorityFeePerGas: adjustedMaxPriorityFeePerGas,
+      });
+
       setTxHash(createTx);
       setStatusMessage('Step 1/2: Creating edition...');
-    } catch (error: unknown) {
-      console.error('Create edition failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      setError(`Failed to create edition: ${errorMessage}`);
+      console.log(`createEdition transaction submitted: ${createTx}`);
+    } catch (err) {
+      setError('Failed to create edition: ' + (err instanceof Error ? err.message : 'Unknown error'));
       setIsCreating(false);
       setStatusMessage('');
+      console.error('createEdition failed:', err);
     }
   };
 
@@ -1810,8 +1647,11 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
           )}
           {statusMessage && (
             <div className="p-4 bg-gray-100 rounded-sm flex items-center justify-center">
-              <p className="text-gray-700 mr-2">{statusMessage}</p>
-              {(statusMessage.includes('Creating') || statusMessage.includes('Setting') || statusMessage.includes('Finalizing')) && (
+              <p className="text-gray-700 mr-2">
+                {statusMessage}
+                {statusMessage.includes('Setting') && !artReceipt && ' (This may take a few seconds)'}
+              </p>
+              {(statusMessage.includes('Creating') || statusMessage.includes('Setting')) && (
                 <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500"></div>
               )}
             </div>
@@ -1840,7 +1680,15 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
         </div>
       ) : (
         <div className="space-y-4">
-          <p className="text-sm">Edition created at: {editionAddress}</p>
+          <div className="flex justify-center">
+            <NFTImage
+              address={editionAddress}
+              tokenId={1}
+              onImageLoad={() => console.log("NFT image loaded")}
+              alchemyUrl={ALCHEMY_URL}
+              isReady={!!artReceipt}
+            />
+          </div>
           {txHash && (
             <p className="text-sm text-green-600">
               Creation Tx:{' '}
@@ -1867,14 +1715,6 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
               </a>
             </p>
           )}
-          <div className="flex justify-center">
-            <NFTImage
-              address={editionAddress}
-              tokenId={1}
-              onImageLoad={() => console.log("NFT image loaded")}
-              alchemyUrl={ALCHEMY_URL}
-            />
-          </div>
           <button
             onClick={() => {
               localStorage.removeItem('selectedColors');

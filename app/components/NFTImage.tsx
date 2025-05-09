@@ -6,7 +6,8 @@ import { ethers } from 'ethers';
 import editionAbi from '../contracts/MintbayEdition.json';
 import Image from 'next/image';
 
-const metadataCache = new Map<string, string>();
+export const metadataCache = new Map<string, string>();
+export const errorCache = new Map<string, string>();
 
 interface NFTImageProps {
   address: string;
@@ -14,6 +15,7 @@ interface NFTImageProps {
   imageSrc?: string;
   onImageLoad?: () => void;
   alchemyUrl?: string;
+  isReady?: boolean;
 }
 
 interface TokenURIResult {
@@ -21,37 +23,64 @@ interface TokenURIResult {
   debug: string;
 }
 
-const useNFTURI = (address: string, tokenId: number, skip: boolean = false, alchemyUrl?: string): string | null => {
+const useNFTURI = (address: string, tokenId: number, skip: boolean = false, alchemyUrl?: string, isReady: boolean = true): string | null => {
+  const cacheKey = `${address}:${tokenId}`;
   const { data, error } = useReadContract({
     address: address as `0x${string}`,
     abi: editionAbi.abi,
     functionName: 'tokenURI',
     args: [BigInt(tokenId)],
-    query: { enabled: !skip && !alchemyUrl },
+    query: { enabled: isReady && !skip && !alchemyUrl },
   });
 
   const [alchemyData, setAlchemyData] = useState<string | null>(null);
 
   useEffect(() => {
-    if (skip || !alchemyUrl) return;
+    if (!isReady || skip || !alchemyUrl) return;
+
+    let isMounted = true;
     const fetchWithAlchemy = async () => {
       try {
+        if (errorCache.has(cacheKey)) {
+          console.log(`Error cache hit for ${cacheKey}: ${errorCache.get(cacheKey)}`);
+          throw new Error(errorCache.get(cacheKey)!);
+        }
+
         const provider = new ethers.JsonRpcProvider(alchemyUrl);
         const contract = new ethers.Contract(address, editionAbi.abi, provider);
         const uri = await contract.tokenURI(tokenId);
-        setAlchemyData(uri);
+        console.log(`Fetched tokenURI for ${cacheKey}: ${uri}`);
+        if (isMounted) {
+          setAlchemyData(uri);
+          errorCache.delete(cacheKey);
+        }
       } catch (err) {
-        console.error(`Failed to fetch tokenURI with Alchemy for ${address}:${tokenId}:`, err);
+        const errorMessage = (err as Error).message;
+        console.error(`Failed to fetch tokenURI with Alchemy for ${cacheKey}:`, err);
+        errorCache.set(cacheKey, errorMessage);
+        if (isMounted) setAlchemyData(null);
       }
     };
+
     fetchWithAlchemy();
-  }, [address, tokenId, skip, alchemyUrl]);
+    return () => {
+      isMounted = false;
+    };
+  }, [address, tokenId, skip, alchemyUrl, isReady, cacheKey]);
 
   return useMemo(() => {
+    if (!isReady) {
+      console.log(`Skipping tokenURI fetch for ${cacheKey}: isReady=false`);
+      return null;
+    }
     if (alchemyData) return alchemyData;
-    if (data && !error) return typeof data === 'string' ? data : null;
+    if (data && !error) {
+      const uri = typeof data === 'string' ? data : null;
+      console.log(`Wagmi tokenURI for ${cacheKey}: ${uri}, error: ${error?.message || 'none'}`);
+      return uri;
+    }
     return null;
-  }, [data, error, alchemyData]);
+  }, [data, error, alchemyData, isReady, cacheKey]);
 };
 
 const processTokenURI = async (uri: string): Promise<TokenURIResult> => {
@@ -64,69 +93,87 @@ const processTokenURI = async (uri: string): Promise<TokenURIResult> => {
     if (uri.startsWith('data:application/json;base64,')) {
       const base64Data = uri.split(',')[1];
       metadata = JSON.parse(atob(base64Data));
-      return { image: metadata?.image || null, debug: `Parsed base64 URI: ${uri}` };
+      const image = metadata?.image || null;
+      console.log(`Parsed base64 URI: ${uri}, image: ${image}`);
+      if (image) metadataCache.set(uri, image);
+      return { image, debug: `Parsed base64 URI: ${uri}` };
     } else if (uri.startsWith('http')) {
       const res = await fetch(uri, { mode: 'cors' });
       if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
       metadata = await res.json();
       const image = metadata?.image || null;
+      console.log(`Fetched HTTP URI: ${uri}, image: ${image}`);
       if (image) metadataCache.set(uri, image);
       return { image, debug: `Fetched HTTP URI: ${uri}, image: ${image}` };
-    } else {
-      return { image: null, debug: `Unsupported URI format: ${uri}` };
     }
+    console.log(`Unsupported URI format: ${uri}`);
+    return { image: null, debug: `Unsupported URI format: ${uri}` };
   } catch (err) {
-    return { image: null, debug: `Failed to process URI: ${uri}, error: ${(err as Error).message}` };
+    const errorMessage = (err as Error).message;
+    console.error(`Failed to process URI: ${uri}, error: ${errorMessage}`);
+    return { image: null, debug: `Failed to process URI: ${uri}, error: ${errorMessage}` };
   }
 };
 
-function NFTImage({ address, tokenId, imageSrc, onImageLoad, alchemyUrl }: NFTImageProps) {
+function NFTImage({ address, tokenId, imageSrc, onImageLoad, alchemyUrl, isReady = true }: NFTImageProps) {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>(imageSrc ? 'success' : 'loading');
   const [fetchedImageSrc, setFetchedImageSrc] = useState<string | null>(imageSrc || null);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(!!imageSrc);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const primaryURI = useNFTURI(address, tokenId, !!imageSrc, alchemyUrl);
-  const fallbackURI = useNFTURI(address, 1, !!imageSrc || tokenId === 1, alchemyUrl);
+  const primaryURI = useNFTURI(address, tokenId, !!imageSrc, alchemyUrl, isReady);
 
   useEffect(() => {
     if (imageSrc) {
       setIsVisible(true);
+      setStatus('success');
+      console.log(`Using provided imageSrc for ${address}:${tokenId}: ${imageSrc}`);
+      return;
+    }
+
+    if (!isReady) {
+      setStatus('loading');
+      setErrorMessage('Waiting for artwork to be finalized...');
+      console.log(`NFTImage ${address}:${tokenId} waiting for isReady=true`);
       return;
     }
 
     if (!primaryURI) {
       setStatus('error');
+      setErrorMessage('Failed to fetch token URI');
+      console.log(`No primaryURI for ${address}:${tokenId}`);
       return;
     }
 
     const loadImage = async () => {
-      const { image } = await processTokenURI(primaryURI);
-      if (image) {
-        setFetchedImageSrc(image);
-        setStatus('success');
-        setIsVisible(true);
-      } else {
+      try {
+        const { image, debug } = await processTokenURI(primaryURI);
+        console.log(debug);
+        if (image) {
+          setFetchedImageSrc(image);
+          setStatus('success');
+          setIsVisible(true);
+          setErrorMessage(null);
+        } else {
+          throw new Error('No image found in metadata');
+        }
+      } catch (err) {
+        const errorMessage = (err as Error).message;
         setStatus('error');
+        setErrorMessage(`Failed to load image: ${errorMessage}`);
+        console.error(`Image load failed for ${address}:${tokenId}: ${errorMessage}`);
       }
     };
 
     loadImage();
-  }, [primaryURI, imageSrc]);
-
-  useEffect(() => {
-    if (status === 'error' && fallbackURI && tokenId !== 1 && !imageSrc) {
-      const loadFallback = async () => {
-        const { image } = await processTokenURI(fallbackURI);
-        setFetchedImageSrc(image || null);
-        setStatus(image ? 'success' : 'error');
-        if (image) setIsVisible(true);
-      };
-      loadFallback();
-    }
-  }, [status, fallbackURI, tokenId, imageSrc]);
+  }, [primaryURI, imageSrc, isReady, address, tokenId]);
 
   if (status === 'loading') {
-    return <Placeholder text="Loading..." />;
+    return <Placeholder text={errorMessage || "Loading..."} />;
+  }
+
+  if (status === 'error') {
+    return <Placeholder text={errorMessage || "Failed to load image"} />;
   }
 
   if (fetchedImageSrc) {
@@ -155,15 +202,15 @@ function NFTImage({ address, tokenId, imageSrc, onImageLoad, alchemyUrl }: NFTIm
     );
   }
 
-  return <Placeholder text="No image" />;
+  return <Placeholder text="No image available" />;
 }
 
 const Placeholder = ({ text }: { text: string }) => (
   <div
-    className="bg-gray-100 flex items-center justify-center transition-opacity duration-500 opacity-0"
+    className="bg-gray-100 flex items-center justify-center transition-opacity duration-500 opacity-100"
     style={{ width: '100%', aspectRatio: '1' }}
   >
-    <span className="text-gray-400 text-xs">{text}</span>
+    <span className="text-gray-400 text-xs text-center">{text}</span>
   </div>
 );
 
@@ -172,5 +219,6 @@ export default memo(NFTImage, (prevProps, nextProps) =>
   prevProps.tokenId === nextProps.tokenId &&
   prevProps.imageSrc === nextProps.imageSrc &&
   prevProps.onImageLoad === nextProps.onImageLoad &&
-  prevProps.alchemyUrl === nextProps.alchemyUrl
+  prevProps.alchemyUrl === nextProps.alchemyUrl &&
+  prevProps.isReady === nextProps.isReady
 );
