@@ -6,8 +6,7 @@ import { ethers } from 'ethers';
 import editionAbi from '../contracts/MintbayEdition.json';
 import Image from 'next/image';
 
-export const metadataCache = new Map<string, string>();
-export const errorCache = new Map<string, string>();
+const metadataCache = new Map<string, string>();
 
 interface NFTImageProps {
   address: string;
@@ -41,23 +40,13 @@ const useNFTURI = (address: string, tokenId: number, skip: boolean = false, alch
     let isMounted = true;
     const fetchWithAlchemy = async () => {
       try {
-        if (errorCache.has(cacheKey)) {
-          console.log(`Error cache hit for ${cacheKey}: ${errorCache.get(cacheKey)}`);
-          throw new Error(errorCache.get(cacheKey)!);
-        }
-
         const provider = new ethers.JsonRpcProvider(alchemyUrl);
         const contract = new ethers.Contract(address, editionAbi.abi, provider);
         const uri = await contract.tokenURI(tokenId);
         console.log(`Fetched tokenURI for ${cacheKey}: ${uri}`);
-        if (isMounted) {
-          setAlchemyData(uri);
-          errorCache.delete(cacheKey);
-        }
+        if (isMounted) setAlchemyData(uri);
       } catch (err) {
-        const errorMessage = (err as Error).message;
         console.error(`Failed to fetch tokenURI with Alchemy for ${cacheKey}:`, err);
-        errorCache.set(cacheKey, errorMessage);
         if (isMounted) setAlchemyData(null);
       }
     };
@@ -76,8 +65,7 @@ const useNFTURI = (address: string, tokenId: number, skip: boolean = false, alch
     if (alchemyData) return alchemyData;
     if (data && !error) {
       const uri = typeof data === 'string' ? data : null;
-      console.log(`Wagmi tokenURI for ${cacheKey}: ${uri}, error: ${error?.message || 'none'}`);
-      return uri;
+console.log(`Wagmi tokenURI for ${cacheKey}: ${uri}, error: ${error instanceof Error ? error.message : 'none'}`);
     }
     return null;
   }, [data, error, alchemyData, isReady, cacheKey]);
