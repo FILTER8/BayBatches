@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, memo } from 'react';
-import { useReadContract,UseReadContractReturnType } from 'wagmi';
+import { useReadContract } from 'wagmi';
 import { ethers } from 'ethers';
 import editionAbi from '../contracts/MintbayEdition.json';
 import Image from 'next/image';
