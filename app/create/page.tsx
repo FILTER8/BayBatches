@@ -1367,24 +1367,24 @@ function MetadataDeployment({ setPage, address }: { setPage: (page: number) => v
   });
 
   useEffect(() => {
-if (receipt && !editionAddress && txHash) {
-  console.log('Received createEdition receipt:', receipt);
-  const editionCreatedLog = receipt.logs.find(
-    log => log.address.toLowerCase() === FACTORY_ADDRESS.toLowerCase() &&
-           log.topics[0] === ethers.id('EditionCreated(address,address)')
-  );
+    if (receipt && !editionAddress && txHash) {
+      console.log('Received createEdition receipt:', receipt);
+      const editionCreatedLog = receipt.logs.find(
+        log => log.address.toLowerCase() === FACTORY_ADDRESS.toLowerCase() &&
+               log.topics[0] === ethers.id('EditionCreated(address,address)')
+      );
 
-  if (!editionCreatedLog || !editionCreatedLog.topics || editionCreatedLog.topics.length < 3) {
-    setError('Failed to find valid EditionCreated event');
-    setIsCreating(false);
-    setStatusMessage('');
-    return;
-  }
+      if (!editionCreatedLog || !editionCreatedLog.topics || editionCreatedLog.topics.length < 3 || !editionCreatedLog.topics[2]) {
+        setError('Failed to find valid EditionCreated event');
+        setIsCreating(false);
+        setStatusMessage('');
+        return;
+      }
 
-  const newEdition = '0x' + editionCreatedLog.topics[2].slice(-40);
-  setEditionAddress(newEdition);
-  setStatusMessage('Step 1/2: Edition created, setting artwork...');
-  console.log(`Edition created at ${newEdition}, proceeding to setBaseArt`);
+      const newEdition = '0x' + editionCreatedLog.topics[2].slice(-40);
+      setEditionAddress(newEdition);
+      setStatusMessage('Step 1/2: Edition created, setting artwork...');
+      console.log(`Edition created at ${newEdition}, proceeding to setBaseArt`);
 
       const setBaseArt = async () => {
         try {
