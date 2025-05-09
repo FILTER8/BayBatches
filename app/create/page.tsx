@@ -12,7 +12,6 @@ import editionAbi from "../contracts/MintbayEdition.json";
 import customGlyphsArtifact from "../contracts/CustomGlyphs.json";
 import fallbackGlyphs from "../data/glyphsFallback.json";
 import { Info, RefreshCw, Droplet, ArrowLeftCircle, ArrowRightCircle } from "@geist-ui/icons";
-import type { TransactionReceipt as WagmiTransactionReceipt } from 'viem';
 
 const customGlyphsAbi = customGlyphsArtifact.abi;
 
