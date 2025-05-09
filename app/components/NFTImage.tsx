@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, memo } from 'react';
-import { useReadContract } from 'wagmi';
+import { useReadContract,UseReadContractReturnType } from 'wagmi';
 import { ethers } from 'ethers';
 import editionAbi from '../contracts/MintbayEdition.json';
 import Image from 'next/image';
@@ -24,7 +24,7 @@ interface TokenURIResult {
 
 const useNFTURI = (address: string, tokenId: number, skip: boolean = false, alchemyUrl?: string, isReady: boolean = true): string | null => {
   const cacheKey = `${address}:${tokenId}`;
-  const { data, error } = useReadContract({
+  const { data, error }: UseReadContractReturnType = useReadContract({
     address: address as `0x${string}`,
     abi: editionAbi.abi,
     functionName: 'tokenURI',
@@ -65,7 +65,12 @@ const useNFTURI = (address: string, tokenId: number, skip: boolean = false, alch
     if (alchemyData) return alchemyData;
     if (data && !error) {
       const uri = typeof data === 'string' ? data : null;
-console.log(`Wagmi tokenURI for ${cacheKey}: ${uri}, error: ${error instanceof Error ? error.message : 'none'}`);
+      console.log(`Wagmi tokenURI for ${cacheKey}: ${uri}, error: ${
+        error && typeof error === 'object' && 'message' in error 
+          ? error.message 
+          : 'none'
+      }`);
+      return uri;
     }
     return null;
   }, [data, error, alchemyData, isReady, cacheKey]);
