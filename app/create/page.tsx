@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -649,7 +648,7 @@ function Editor({
     isDrawing.current = false;
   };
 
-  const handleDoubleTap = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const handleDoubleTap = () => {
     if (selectedColorIdx1 < colors.length / 3 && selectedColorIdx2 < colors.length / 3) {
       const temp = selectedColorIdx1;
       setSelectedColorIdx1(selectedColorIdx2);
@@ -661,9 +660,9 @@ function Editor({
     }
   };
 
-  const handleTouchStart = (_e: React.TouchEvent<HTMLCanvasElement>) => {
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
     if (e.touches.length === 2) {
-      handleDoubleTap(e);
+      handleDoubleTap();
       return;
     }
     startDrawing(e);
