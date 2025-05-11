@@ -65,7 +65,8 @@ const useNFTURI = (address: string, tokenId: number, skip: boolean = false, alch
     if (alchemyData) return alchemyData;
     if (data && !contractError) {
       const uri = typeof data === 'string' ? data : null;
-      console.log(`Wagmi tokenURI for ${cacheKey}: ${uri}, error: ${contractError ? contractError.message : 'none'}`);
+      const errorMessage = contractError instanceof Error ? contractError.message : contractError ? String(contractError) : 'none';
+      console.log(`Wagmi tokenURI for ${cacheKey}: ${uri}, error: ${errorMessage}`);
       return uri;
     }
     return null;
