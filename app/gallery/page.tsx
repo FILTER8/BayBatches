@@ -35,7 +35,7 @@ interface GraphData {
   editions: Edition[];
 }
 
-const GLYPH_SET_ADDRESS = '0x94e1f188d72970ce27c890fb9469a5bbb550e2d7';
+const GLYPH_SET_ADDRESS = '0x7fe14be3b6b50bc523fac500dc3f827cd99c2b84';
 const ALCHEMY_URL = process.env.NEXT_PUBLIC_ALCHEMY_URL || '';
 
 const provider = ALCHEMY_URL ? new ethers.JsonRpcProvider(ALCHEMY_URL) : null;
