@@ -765,14 +765,14 @@ function Editor({
         <button
           onClick={generateGlyphVariation}
           disabled={!backgroundGlyphs.some(g => g !== null)}
-          className="flex-1 bg-gray-400 hover:bg-gray-500 text-white py-3 text-sm tracking-[0.1em] rounded-none disabled:bg-gray-200 transition-colors"
+          className="flex-1 bg-gray-400 hover:bg-gray-500 text-white py-3 text-sx tracking-[0.1em] rounded-none disabled:bg-gray-200 transition-colors"
         >
           GLYPH
         </button>
         <button
           onClick={generateColorVariation}
           disabled={!backgroundGlyphs.some(g => g !== null)}
-          className="flex-1 bg-gray-400 hover:bg-gray-500 text-white py-3 text-sm tracking-[0.1em] rounded-none disabled:bg-gray-200 transition-colors"
+          className="flex-1 bg-gray-400 hover:bg-gray-500 text-white py-3 text-sx tracking-[0.1em] rounded-none disabled:bg-gray-200 transition-colors"
         >
           COLOR
         </button>
