@@ -646,7 +646,7 @@ const keepDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<H
   }
 };
 
-const stopDrawing = (e?: React.TouchEvent<HTMLCanvasElement>) => {
+const stopDrawing = (e: React.TouchEvent<HTMLCanvasElement>) => {
   isDrawing.current = false;
   if (e) {
     e.preventDefault();
