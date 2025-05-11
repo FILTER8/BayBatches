@@ -661,6 +661,14 @@ function Editor({
     }
   };
 
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.touches.length === 2) {
+      handleDoubleTap(e);
+      return;
+    }
+    startDrawing(e);
+  };
+
   return (
     <div className="space-y-4 w-full">
       <canvas
@@ -671,13 +679,7 @@ function Editor({
         onMouseMove={keepDrawing}
         onMouseUp={stopDrawing}
         onMouseOut={stopDrawing}
-      onTouchStart={(e) => {
-  if (e.touches.length === 2) {
-    handleDoubleTap(e);
-    return;
-  }
-  startDrawing(e);
-}}
+        onTouchStart={handleTouchStart}
         onTouchMove={keepDrawing}
         onTouchEnd={stopDrawing}
         onDoubleClick={handleDoubleTap}
@@ -1047,11 +1049,11 @@ function DeploymentScreen({
     }
   }, [receipt, txHash, writeContractAsync, publicClient, backgroundGlyphs, foregroundGlyphs, backgroundColors, glyphColors, colors, address, setEditionAddress, setArtTxHash, setError, setIsCreating]);
 
-useEffect(() => {
-  if (artReceipt && editionAddress) {
-    setPage(3);
-  }
-}, [artReceipt, editionAddress, setPage]);
+  useEffect(() => {
+    if (artReceipt && editionAddress) {
+      setPage(3);
+    }
+  }, [artReceipt, editionAddress, setPage]);
 
   const canMint = () => {
     const usedColorIndices = new Set<number>(
