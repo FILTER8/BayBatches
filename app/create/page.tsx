@@ -1077,7 +1077,7 @@ setEditionAddress(newEdition);
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="e.g. Pixel Art #1234"
-          className="w-full border border-gray-300 p-2 placeholder-gray-400"
+          className="w-full border border-gray-300 p-2 placeholder-gray-400 resize-none"
         />
       </div>
       <div>
@@ -1086,7 +1086,7 @@ setEditionAddress(newEdition);
           value={symbol}
           onChange={e => setSymbol(e.target.value)}
           placeholder="e.g. PXL1234"
-          className="w-full border border-gray-300 p-2 placeholder-gray-400"
+          className="w-full border border-gray-300 p-2 placeholder-gray-400 resize-none"
         />
       </div>
       <div>
@@ -1095,7 +1095,7 @@ setEditionAddress(newEdition);
           value={description}
           onChange={e => setDescription(e.target.value)}
           placeholder="Describe your artwork"
-          className="w-full border border-gray-300 p-2 h-20 placeholder-gray-400"
+          className="w-full border border-gray-300 p-2 h-20 placeholder-gray-400 resize-none"
         />
       </div>
       <div>
