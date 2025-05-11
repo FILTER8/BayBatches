@@ -665,32 +665,30 @@ const stopDrawing = (e: React.TouchEvent<HTMLCanvasElement>) => {
     }
   };
 
-const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
-  if (e.touches.length === 2) {
-    handleDoubleTap();
-    return;
+const stopDrawing = (e?: React.TouchEvent<HTMLCanvasElement> | React.MouseEvent<HTMLCanvasElement>) => {
+  isDrawing.current = false;
+  if (e && 'touches' in e) {
+    e.preventDefault();
   }
-  e.preventDefault();
-  startDrawing(e);
 };
 
-  return (
-    <div className="space-y-4 w-full">
-      <canvas
-  ref={canvasRef}
-  width={size * scale}
-  height={size * scale}
-  onMouseDown={startDrawing}
-  onMouseMove={keepDrawing}
-  onMouseUp={stopDrawing}
-  onMouseOut={stopDrawing}
-  onTouchStart={handleTouchStart}
-  onTouchMove={keepDrawing}
-  onTouchEnd={stopDrawing}
-  onDoubleClick={handleDoubleTap}
-  className="border border-gray-100 mb-1 pixelated w-full"
-  style={{ aspectRatio: "1 / 1" }}
-/>
+return (
+  <div className="space-y-4 w-full">
+    <canvas
+      ref={canvasRef}
+      width={size * scale}
+      height={size * scale}
+      onMouseDown={startDrawing}
+      onMouseMove={keepDrawing}
+      onMouseUp={stopDrawing}
+      onMouseOut={stopDrawing}
+      onTouchStart={handleTouchStart}
+      onTouchMove={keepDrawing}
+      onTouchEnd={stopDrawing}
+      onDoubleClick={handleDoubleTap}
+      className="border border-gray-100 mb-1 pixelated w-full"
+      style={{ aspectRatio: "1 / 1" }}
+    />
       <div className="flex flex-wrap justify-center gap-1 w-full">
         {colors.length === 0 ? (
           <p className="text-sm text-gray-500">No colors available</p>
