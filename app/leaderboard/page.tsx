@@ -8,13 +8,19 @@ import { TitleBar, PageFooter } from '../components/PageContent';
 import { Leaderboard } from '../components/Leaderboard';
 import { LEADERBOARD_QUERY } from '../graphql/queries';
 import { getUserProfiles } from '../lib/neynar';
+import { getGlyphContractFromEdition } from '../lib/contractUtils';
+
+const GLYPH_SET_ADDRESS = '0x7fe14be3b6b50bc523fac500dc3f827cd99c2b84';
 
 interface Token {
   id: string;
+  tokenId: string;
+  edition: { id: string; glyphContract: string };
 }
 
 interface Edition {
   id: string;
+  glyphContract: string;
 }
 
 interface User {
@@ -26,12 +32,14 @@ interface User {
 interface Profile {
   username: string;
   avatarUrl: string;
+  basename: string | null;
 }
 
 interface LeaderboardEntry {
   walletAddress: string;
   username: string;
   avatarUrl: string;
+  basename: string | null;
   tokensOwnedCount: number;
   editionsCreatedCount: number;
 }
@@ -42,6 +50,13 @@ export default function LeaderboardPage() {
   });
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [filteredUsers, setFilteredUsers] = useState<
+    Array<{
+      id: string;
+      tokensOwnedCount: number;
+      editionsCreatedCount: number;
+    }>
+  >([]);
 
   useEffect(() => {
     if (data) {
@@ -65,31 +80,86 @@ export default function LeaderboardPage() {
       } else {
         console.log('No users with tokens or editions found');
       }
+
+      // Filter tokens and editions
+      const filterData = async () => {
+        const filtered = await Promise.all(
+          data.users.map(async (user) => {
+            // Filter tokensOwned, excluding tokenId #1
+            let filteredTokensOwned: Token[] = [];
+            if (user.tokensOwned?.length > 0) {
+              const tokenResults = await Promise.allSettled(
+                user.tokensOwned.map(async (token) => {
+                  const glyphAddress = await getGlyphContractFromEdition(token.edition.id);
+                  return { token, glyphAddress };
+                })
+              );
+              filteredTokensOwned = tokenResults
+                .filter(
+                  (result): result is PromiseFulfilledResult<{ token: Token; glyphAddress: string }> =>
+                    result.status === 'fulfilled' &&
+                    result.value.glyphAddress === GLYPH_SET_ADDRESS.toLowerCase() &&
+                    Number(result.value.token.tokenId) !== 1
+                )
+                .map((result) => result.value.token);
+            }
+
+            // Filter editionsCreated
+            let filteredEditionsCreated: Edition[] = [];
+            if (user.editionsCreated?.length > 0) {
+              const editionResults = await Promise.allSettled(
+                user.editionsCreated.map(async (edition) => {
+                  const glyphAddress = await getGlyphContractFromEdition(edition.id);
+                  return { edition, glyphAddress };
+                })
+              );
+              filteredEditionsCreated = editionResults
+                .filter(
+                  (result): result is PromiseFulfilledResult<{ edition: Edition; glyphAddress: string }> =>
+                    result.status === 'fulfilled' &&
+                    result.value.glyphAddress === GLYPH_SET_ADDRESS.toLowerCase()
+                )
+                .map((result) => result.value.edition);
+            }
+
+            return {
+              id: user.id,
+              tokensOwnedCount: filteredTokensOwned.length,
+              editionsCreatedCount: filteredEditionsCreated.length,
+            };
+          })
+        );
+        setFilteredUsers(filtered);
+      };
+
+      filterData();
     }
   }, [data]);
 
   const mostCollected: LeaderboardEntry[] =
-    data?.users
-      .filter((user) => (user.tokensOwned?.length || 0) > 0)
+    filteredUsers
+      .filter((user) => user.tokensOwnedCount > 0)
       .map((user) => ({
         walletAddress: user.id,
         username: profiles[user.id]?.username || user.id.slice(0, 6),
         avatarUrl: profiles[user.id]?.avatarUrl || 'https://bay-batches.vercel.app/splashicon.png',
-        tokensOwnedCount: user.tokensOwned?.length || 0,
-        editionsCreatedCount: user.editionsCreated?.length || 0,
+        basename: profiles[user.id]?.basename || null,
+        tokensOwnedCount: user.tokensOwnedCount,
+        editionsCreatedCount: user.editionsCreatedCount,
       }))
       .sort((a, b) => b.tokensOwnedCount - a.tokensOwnedCount)
       .slice(0, 10) || [];
 
   const mostCreated: LeaderboardEntry[] =
-    data?.users
-      .filter((user) => (user.editionsCreated?.length || 0) > 0)
+    filteredUsers
+      .filter((user) => user.editionsCreatedCount > 0)
       .map((user) => ({
         walletAddress: user.id,
         username: profiles[user.id]?.username || user.id.slice(0, 6),
         avatarUrl: profiles[user.id]?.avatarUrl || 'https://bay-batches.vercel.app/splashicon.png',
-        tokensOwnedCount: user.tokensOwned?.length || 0,
-        editionsCreatedCount: user.editionsCreated?.length || 0,
+        basename: profiles[user.id]?.basename || null,
+        tokensOwnedCount: user.tokensOwnedCount,
+        editionsCreatedCount: user.editionsCreatedCount,
       }))
       .sort((a, b) => b.editionsCreatedCount - a.editionsCreatedCount)
       .slice(0, 10) || [];

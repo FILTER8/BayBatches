@@ -1,14 +1,14 @@
-// app/components/Leaderboard.tsx
 'use client';
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import Image from 'next/image'; // Add this import
+import Image from 'next/image';
 
 interface LeaderboardEntry {
   walletAddress: string;
   username: string;
   avatarUrl: string;
+  basename: string | null;
   tokensOwnedCount: number;
   editionsCreatedCount: number;
 }
@@ -52,22 +52,25 @@ export function Leaderboard({ mostCollected, mostCreated }: LeaderboardProps) {
         {entries.length === 0 ? (
           <p className="text-sm text-gray-500 text-center">No data available</p>
         ) : (
-          entries.map((entry) => (
+          entries.map((entry, index) => (
             <div
               key={entry.walletAddress}
               className="flex items-center gap-2 p-2 w-full h-11 border border-gray-300 cursor-pointer hover:bg-gray-100"
               onClick={() => router.push(`/user/${entry.walletAddress}`)}
             >
+              <span className="text-sm font-bold w-6">{`${index + 1}.`}</span>
               <Image
                 src={entry.avatarUrl || 'https://default-avatar.png'}
-                alt={entry.username}
+                alt={entry.basename || entry.username || entry.walletAddress}
                 width={32}
                 height={32}
                 className="rounded-full"
-                unoptimized // Optional: Use if external URLs cause issues
+                unoptimized
               />
-              <span className="text-sm font-medium truncate">{entry.username}</span>
-              <span className="text-sm  ml-auto">
+              <span className="text-sm font-medium truncate">
+                {entry.basename || entry.username || entry.walletAddress.slice(0, 6)}
+              </span>
+              <span className="text-sm ml-auto">
                 {tab === 'collected'
                   ? `${entry.tokensOwnedCount} tokens`
                   : `${entry.editionsCreatedCount} editions`}

@@ -10,7 +10,7 @@ export default function UserProfilePage() {
   const params = useParams();
   const router = useRouter();
   const walletAddress = params?.walletAddress as string | undefined;
-  const [profile, setProfile] = useState<{ username: string; avatarUrl: string } | null>(null);
+  const [profile, setProfile] = useState<{ username: string; avatarUrl: string; basename: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export default function UserProfilePage() {
       <div className="w-full max-w-md mx-auto px-4 py-3">
         <Header />
         <div
-           className="w-full h-11 flex items-center justify-center text-white text-sm tracking-[0.1em] mb-3"
+          className="w-full h-11 flex items-center justify-center text-white text-sm tracking-[0.1em] mb-3"
           style={{ backgroundColor: '#ff5f11' }}
           onClick={() => router.push('/leaderboard')}
         >
@@ -53,6 +53,7 @@ export default function UserProfilePage() {
           walletAddress={walletAddress}
           username={profile.username}
           avatarUrl={profile.avatarUrl}
+          basename={profile.basename}
         />
       </main>
     </div>

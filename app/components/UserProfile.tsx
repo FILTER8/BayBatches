@@ -2,39 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery } from '@apollo/client';
-import { ethers } from 'ethers';
 import { USER_PROFILE_QUERY } from '../graphql/queries';
 import MemoizedNFTImage from './NFTImage';
 import { TokenDetail } from './TokenDetail';
-import MintbayEditionAbi from '../contracts/MintbayEdition.json';
 import Image from 'next/image';
+import { getGlyphContractFromEdition } from '../lib/contractUtils';
 
 const GLYPH_SET_ADDRESS = '0x7fe14be3b6b50bc523fac500dc3f827cd99c2b84';
-const ALCHEMY_URL = process.env.NEXT_PUBLIC_ALCHEMY_URL || '';
-const provider = ALCHEMY_URL ? new ethers.JsonRpcProvider(ALCHEMY_URL) : null;
-const glyphContractCache = new Map<string, string | null>();
-
-async function getGlyphContractFromEdition(address: string): Promise<string | null> {
-  if (!provider) {
-    console.error('Provider is not initialized due to missing ALCHEMY_URL');
-    return null;
-  }
-  if (glyphContractCache.has(address)) {
-    return glyphContractCache.get(address)!;
-  }
-
-  try {
-    const contract = new ethers.Contract(address, MintbayEditionAbi.abi, provider);
-    const glyphAddress = await contract.glyphContract();
-    const result = glyphAddress.toLowerCase();
-    glyphContractCache.set(address, result);
-    return result;
-  } catch (error) {
-    console.error(`Failed to fetch glyphContract for ${address}:`, error);
-    glyphContractCache.set(address, null);
-    return null;
-  }
-}
 
 interface Token {
   id: string;
@@ -61,9 +35,10 @@ interface UserProfileProps {
   walletAddress: string;
   username: string;
   avatarUrl: string;
+  basename: string | null;
 }
 
-export function UserProfile({ walletAddress, username, avatarUrl }: UserProfileProps) {
+export function UserProfile({ walletAddress, username, avatarUrl, basename }: UserProfileProps) {
   const [tab, setTab] = useState<'collected' | 'created'>('collected');
   const [selectedEdition, setSelectedEdition] = useState<SelectedEdition | null>(null);
   const { data, loading, error } = useQuery<{ user: { tokensOwned: Token[]; editionsCreated: Edition[] } }>(
@@ -162,7 +137,7 @@ export function UserProfile({ walletAddress, username, avatarUrl }: UserProfileP
       <div className="flex items-center gap-2 mt-2">
         <Image
           src={avatarUrl || 'https://bay-batches.vercel.app/splashicon.png'}
-          alt={username}
+          alt={basename || username || walletAddress}
           width={32}
           height={32}
           className="rounded-full"
@@ -173,10 +148,10 @@ export function UserProfile({ walletAddress, username, avatarUrl }: UserProfileP
             className="text-sm font-bold cursor-pointer text-blue-500 hover:underline"
             onClick={() => setSelectedEdition(null)}
           >
-            {username}
+            {basename || username || walletAddress.slice(0, 6)}
           </h1>
         ) : (
-          <h1 className="text-sm font-bold">{username}</h1>
+          <h1 className="text-sm font-bold">{basename || username || walletAddress.slice(0, 6)}</h1>
         )}
       </div>
       <section className="mt-0">
