@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -46,9 +47,9 @@ function getRandomInt(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function debounce(func: Function, wait: number) {
+function debounce<T extends (...args: unknown[]) => void>(func: T, wait: number) {
   let timeout: NodeJS.Timeout;
-  return (...args: any[]) => {
+  return (...args: Parameters<T>) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
   };
@@ -77,90 +78,90 @@ export default function Create() {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const resetEditor = useCallback(() => {
+    // Initialize arrays
+    const newBackgroundGlyphs = new Array(81).fill(1); // Solid background for all cells
+    const newForegroundGlyphs = new Array(81).fill(null);
+    const newBackgroundColors = new Array(81).fill(null);
+    const newGlyphColors = new Array(81).fill(null);
+
+    // Select two distinct random color indices (0–8)
+    const colorIdx1 = getRandomInt(0, 8);
+    let colorIdx2;
+    do {
+      colorIdx2 = getRandomInt(0, 8);
+    } while (colorIdx2 === colorIdx1);
+    setSelectedColorIdx1(colorIdx1);
+    setSelectedColorIdx2(colorIdx2);
+
+    // Set glyph 1 as default
+    setSelectedGlyphId(1);
+
+    // Fill canvas with one random graphic glyph (1–15)
+    const graphicGlyphId = getRandomInt(1, 15);
+    for (let i = 0; i < 81; i++) {
+      newForegroundGlyphs[i] = graphicGlyphId;
+      newBackgroundColors[i] = colorIdx1 + 1;
+      newGlyphColors[i] = colorIdx2 + 1;
+    }
+
+    // Place a random typo variation (7 glyphs, including 'S') in row 5, cols 2–8 (indices 37–43)
+    const TYPO_VARIATIONS = [
+      [16, 17, 18, 19, 20, 21, 22], // Variation 1: B, A, T, C, H, E, S
+      [23, 24, 25, 26, 27, 28, 29], // Variation 2
+      [30, 31, 32, 33, 34, 35, 36], // Variation 3
+      [37, 38, 39, 40, 41, 42, 43], // Variation 4
+      [44, 45, 46, 47, 48, 49, 50], // Variation 5
+      [51, 52, 53, 54, 55, 56, 57], // Variation 6
+      [58, 59, 60, 61, 62, 63, 64], // Variation 7
+      [65, 66, 67, 68, 69, 70, 71], // Variation 8
+      [72, 73, 74, 75, 76, 77, 78], // Variation 9
+    ];
+    const variationIndex = getRandomInt(0, TYPO_VARIATIONS.length - 1);
+    const typoGlyphs = TYPO_VARIATIONS[variationIndex];
+    for (let i = 0; i < 7 && i < typoGlyphs.length; i++) {
+      const index = 37 + i; // Row 5, cols 2–8 (indices 37–43)
+      newForegroundGlyphs[index] = typoGlyphs[i];
+      newBackgroundGlyphs[index] = 1;
+      newBackgroundColors[index] = colorIdx1 + 1;
+      newGlyphColors[index] = colorIdx2 + 1;
+    }
+
+    // Set state
+    setBackgroundGlyphs(newBackgroundGlyphs);
+    setForegroundGlyphs(newForegroundGlyphs);
+    setBackgroundColors(newBackgroundColors);
+    setGlyphColors(newGlyphColors);
+
+    const randomNum = getRandomInt(1000, 9999);
+    setGlyphBatchIndex(0);
+    setEditionSize(1);
+    setName(`Pixel Art #${randomNum}`);
+    setSymbol(`PXL${randomNum}`);
+    setDescription("A unique 9x9 pixel artwork created on Warpcast.");
+    setPage(1);
+    setTxHash(null);
+    setArtTxHash(null);
+    setEditionAddress(null);
+    setIsCreating(false);
+    setError(null);
+    console.log("resetEditor: initialized", {
+      selectedColorIdx1: colorIdx1,
+      selectedColorIdx2: colorIdx2,
+      selectedGlyphId: 1,
+      graphicGlyphId,
+      typoVariationIndex: variationIndex,
+      backgroundGlyphs: newBackgroundGlyphs,
+      foregroundGlyphs: newForegroundGlyphs,
+      backgroundColors: newBackgroundColors,
+      glyphColors: newGlyphColors
+    });
+  }, []); // Removed [colors]
+
   useEffect(() => {
     setIsMounted(true);
     resetEditor();
-  }, []);
-
-const resetEditor = useCallback(() => {
-  // Initialize arrays
-  const newBackgroundGlyphs = new Array(81).fill(1); // Solid background for all cells
-  const newForegroundGlyphs = new Array(81).fill(null);
-  const newBackgroundColors = new Array(81).fill(null);
-  const newGlyphColors = new Array(81).fill(null);
-
-  // Select two distinct random color indices (0–8)
-  let colorIdx1 = getRandomInt(0, 8);
-  let colorIdx2;
-  do {
-    colorIdx2 = getRandomInt(0, 8);
-  } while (colorIdx2 === colorIdx1);
-  setSelectedColorIdx1(colorIdx1);
-  setSelectedColorIdx2(colorIdx2);
-
-  // Set glyph 1 as default
-  setSelectedGlyphId(1);
-
-  // Fill canvas with one random graphic glyph (1–15)
-  const graphicGlyphId = getRandomInt(1, 15);
-  for (let i = 0; i < 81; i++) {
-    newForegroundGlyphs[i] = graphicGlyphId;
-    newBackgroundColors[i] = colorIdx1 + 1;
-    newGlyphColors[i] = colorIdx2 + 1;
-  }
-
-  // Place a random typo variation (7 glyphs, including 'S') in row 5, cols 2–8 (indices 37–43)
-  const TYPO_VARIATIONS = [
-    [16, 17, 18, 19, 20, 21, 22], // Variation 1: B, A, T, C, H, E, S
-    [23, 24, 25, 26, 27, 28, 29], // Variation 2
-    [30, 31, 32, 33, 34, 35, 36], // Variation 3
-    [37, 38, 39, 40, 41, 42, 43], // Variation 4
-    [44, 45, 46, 47, 48, 49, 50], // Variation 5
-    [51, 52, 53, 54, 55, 56, 57], // Variation 6
-    [58, 59, 60, 61, 62, 63, 64], // Variation 7
-    [65, 66, 67, 68, 69, 70, 71], // Variation 8
-    [72, 73, 74, 75, 76, 77, 78], // Variation 9
-  ];
-  const variationIndex = getRandomInt(0, TYPO_VARIATIONS.length - 1);
-  const typoGlyphs = TYPO_VARIATIONS[variationIndex];
-  for (let i = 0; i < 7 && i < typoGlyphs.length; i++) {
-    const index = 37 + i; // Row 5, cols 2–8 (indices 37–43)
-    newForegroundGlyphs[index] = typoGlyphs[i];
-    newBackgroundGlyphs[index] = 1;
-    newBackgroundColors[index] = colorIdx1 + 1;
-    newGlyphColors[index] = colorIdx2 + 1;
-  }
-
-  // Set state
-  setBackgroundGlyphs(newBackgroundGlyphs);
-  setForegroundGlyphs(newForegroundGlyphs);
-  setBackgroundColors(newBackgroundColors);
-  setGlyphColors(newGlyphColors);
-
-  const randomNum = getRandomInt(1000, 9999);
-  setGlyphBatchIndex(0);
-  setEditionSize(1);
-  setName(`Pixel Art #${randomNum}`);
-  setSymbol(`PXL${randomNum}`);
-  setDescription("A unique 9x9 pixel artwork created on Warpcast.");
-  setPage(1);
-  setTxHash(null);
-  setArtTxHash(null);
-  setEditionAddress(null);
-  setIsCreating(false);
-  setError(null);
-  console.log("resetEditor: initialized", {
-    selectedColorIdx1: colorIdx1,
-    selectedColorIdx2: colorIdx2,
-    selectedGlyphId: 1,
-    graphicGlyphId,
-    typoVariationIndex: variationIndex,
-    backgroundGlyphs: newBackgroundGlyphs,
-    foregroundGlyphs: newForegroundGlyphs,
-    backgroundColors: newBackgroundColors,
-    glyphColors: newGlyphColors
-  });
-}, [colors]);
+  }, [resetEditor]);
 
   if (!isMounted) {
     return null;
@@ -431,19 +432,19 @@ function Editor({
     }
 
     // Apply color mapping
-  for (let i = 0; i < 81; i++) {
-  const bgGlyph = backgroundGlyphs[i];
-  if (bgGlyph === null) {
-    continue;
-  }
-  if (backgroundColors[i] !== null) {
-    newBgColors[i] = colorMap[backgroundColors[i]!] || backgroundColors[i];
-  }
-  const fgGlyph = foregroundGlyphs[i];
-  if (fgGlyph !== null && fgGlyph !== 0 && glyphColors[i] !== null) {
-    newFgColors[i] = colorMap[glyphColors[i]!] || glyphColors[i];
-  }
-}
+    for (let i = 0; i < 81; i++) {
+      const bgGlyph = backgroundGlyphs[i];
+      if (bgGlyph === null) {
+        continue;
+      }
+      if (backgroundColors[i] !== null) {
+        newBgColors[i] = colorMap[backgroundColors[i]!] || backgroundColors[i];
+      }
+      const fgGlyph = foregroundGlyphs[i];
+      if (fgGlyph !== null && fgGlyph !== 0 && glyphColors[i] !== null) {
+        newFgColors[i] = colorMap[glyphColors[i]!] || glyphColors[i];
+      }
+    }
 
     setBackgroundColors(newBgColors);
     setGlyphColors(newFgColors);
@@ -503,7 +504,9 @@ function Editor({
     }
   }, [backgroundGlyphs, foregroundGlyphs, backgroundColors, glyphColors, colors]);
 
-  const debouncedRedraw = useCallback(debounce(redrawCanvas, 100), [redrawCanvas]);
+  const debouncedRedraw = useCallback(() => {
+    return debounce(redrawCanvas, 100)();
+  }, [redrawCanvas]);
 
   useEffect(() => {
     debouncedRedraw();
@@ -668,14 +671,16 @@ function Editor({
         onMouseMove={keepDrawing}
         onMouseUp={stopDrawing}
         onMouseOut={stopDrawing}
-        onTouchStart={startDrawing}
+        onTouchStart={(e) => {
+          if (e.touches.length === 2) {
+            handleDoubleTap(e);
+          } else {
+            startDrawing(e);
+          }
+        }}
         onTouchMove={keepDrawing}
         onTouchEnd={stopDrawing}
         onDoubleClick={handleDoubleTap}
-        onTouchStart={(e) => {
-          if (e.touches.length === 2) handleDoubleTap(e);
-          else startDrawing(e);
-        }}
         className="border border-gray-100 mb-1 pixelated w-full"
         style={{ aspectRatio: "1 / 1" }}
       />
@@ -910,9 +915,9 @@ function DeploymentScreen({
       };
       const createTx = await writeContractAsync(config);
       setTxHash(createTx);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("createEdition error:", err);
-      setError(`Failed to create edition: ${err.message || "Unknown error"}`);
+      setError(`Failed to create edition: ${(err as Error).message || "Unknown error"}`);
       setIsCreating(false);
     }
   };
