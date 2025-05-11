@@ -637,16 +637,21 @@ function Editor({
     draw(e);
   };
 
-  const keepDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (isDrawing.current) {
+const keepDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  if (isDrawing.current) {
+    if ('touches' in e) {
       e.preventDefault();
-      draw(e);
     }
-  };
+    draw(e);
+  }
+};
 
-  const stopDrawing = () => {
-    isDrawing.current = false;
-  };
+const stopDrawing = (e?: React.TouchEvent<HTMLCanvasElement>) => {
+  isDrawing.current = false;
+  if (e) {
+    e.preventDefault();
+  }
+};
 
   const handleDoubleTap = () => {
     if (selectedColorIdx1 < colors.length / 3 && selectedColorIdx2 < colors.length / 3) {
@@ -660,32 +665,33 @@ function Editor({
     }
   };
 
-  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (e.touches.length === 2) {
-      handleDoubleTap();
-      return;
-    }
-    startDrawing(e);
-  };
+const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+  if (e.touches.length === 2) {
+    handleDoubleTap();
+    return;
+  }
+  e.preventDefault();
+  startDrawing(e);
+};
 
   return (
     <div className="space-y-4 w-full">
       <canvas
-        ref={canvasRef}
-        width={size * scale}
-        height={size * scale}
-        onMouseDown={startDrawing}
-        onMouseMove={keepDrawing}
-        onMouseUp={stopDrawing}
-        onMouseOut={stopDrawing}
-        onTouchStart={handleTouchStart}
-        onTouchMove={keepDrawing}
-        onTouchEnd={stopDrawing}
-        onDoubleClick={handleDoubleTap}
-        className="border border-gray-100 mb-1 pixelated w-full"
-        style={{ aspectRatio: "1 / 1" }}
-      />
-      <div className="flex flex-wrap justify-center gap-2 w-full">
+  ref={canvasRef}
+  width={size * scale}
+  height={size * scale}
+  onMouseDown={startDrawing}
+  onMouseMove={keepDrawing}
+  onMouseUp={stopDrawing}
+  onMouseOut={stopDrawing}
+  onTouchStart={handleTouchStart}
+  onTouchMove={keepDrawing}
+  onTouchEnd={stopDrawing}
+  onDoubleClick={handleDoubleTap}
+  className="border border-gray-100 mb-1 pixelated w-full"
+  style={{ aspectRatio: "1 / 1" }}
+/>
+      <div className="flex flex-wrap justify-center gap-1 w-full">
         {colors.length === 0 ? (
           <p className="text-sm text-gray-500">No colors available</p>
         ) : (
@@ -722,7 +728,7 @@ function Editor({
               >
                 {(isColor1 || isColor2) && (
                   <span className="absolute bottom-0 left-0 text-xs">
-                    {isColor1 ? "Background" : "Glyph"}
+                    {isColor1 ? "" : ""}
                   </span>
                 )}
               </div>
