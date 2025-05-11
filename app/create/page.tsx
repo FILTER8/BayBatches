@@ -496,10 +496,6 @@ function Editor({
           }
         }
       }
-
-      ctx.strokeStyle = "#A9A9A9";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(x, y, scale, scale);
     }
   }, [backgroundGlyphs, foregroundGlyphs, backgroundColors, glyphColors, colors]);
 
@@ -637,21 +633,16 @@ function Editor({
     draw(e);
   };
 
-const keepDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-  if (isDrawing.current) {
-    if ('touches' in e) {
+  const keepDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (isDrawing.current) {
       e.preventDefault();
+      draw(e);
     }
-    draw(e);
-  }
-};
+  };
 
-const stopDrawing = (e?: React.TouchEvent<HTMLCanvasElement> | React.MouseEvent<HTMLCanvasElement>) => {
-  isDrawing.current = false;
-  if (e && 'touches' in e) {
-    e.preventDefault();
-  }
-};
+  const stopDrawing = () => {
+    isDrawing.current = false;
+  };
 
   const handleDoubleTap = () => {
     if (selectedColorIdx1 < colors.length / 3 && selectedColorIdx2 < colors.length / 3) {
@@ -665,32 +656,31 @@ const stopDrawing = (e?: React.TouchEvent<HTMLCanvasElement> | React.MouseEvent<
     }
   };
 
-const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
-  if (e.touches.length === 2) {
-    handleDoubleTap();
-    return;
-  }
-  e.preventDefault();
-  startDrawing(e);
-};
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.touches.length === 2) {
+      handleDoubleTap();
+      return;
+    }
+    startDrawing(e);
+  };
 
-return (
-  <div className="space-y-4 w-full">
-    <canvas
-      ref={canvasRef}
-      width={size * scale}
-      height={size * scale}
-      onMouseDown={startDrawing}
-      onMouseMove={keepDrawing}
-      onMouseUp={stopDrawing}
-      onMouseOut={stopDrawing}
-      onTouchStart={handleTouchStart}
-      onTouchMove={keepDrawing}
-      onTouchEnd={stopDrawing}
-      onDoubleClick={handleDoubleTap}
-      className="border border-gray-100 mb-1 pixelated w-full"
-      style={{ aspectRatio: "1 / 1" }}
-    />
+  return (
+    <div className="space-y-4 w-full">
+      <canvas
+        ref={canvasRef}
+        width={size * scale}
+        height={size * scale}
+        onMouseDown={startDrawing}
+        onMouseMove={keepDrawing}
+        onMouseUp={stopDrawing}
+        onMouseOut={stopDrawing}
+        onTouchStart={handleTouchStart}
+        onTouchMove={keepDrawing}
+        onTouchEnd={stopDrawing}
+        onDoubleClick={handleDoubleTap}
+        className="border border-gray-100 mb-1 pixelated w-full"
+        style={{ aspectRatio: "1 / 1" }}
+      />
       <div className="flex flex-wrap justify-center gap-1 w-full">
         {colors.length === 0 ? (
           <p className="text-sm text-gray-500">No colors available</p>
@@ -703,7 +693,7 @@ return (
               <div
                 key={idx}
                 className={`w-8 h-8 border cursor-pointer hover:shadow ${
-                  isColor1 ? "border-2 border-green-500" : isColor2 ? "border-2 border-blue-500" : "border-gray-300"
+                  isColor1 ? "border-2 border-green-500" : isColor2 ? "border-2 border-blue-500" : "border-gray-100"
                 }`}
                 style={{ backgroundColor: `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})` }}
                 onClick={() => {
@@ -736,7 +726,7 @@ return (
           })
         )}
       </div>
-      <div className="flex items-center justify-center gap-2 w-full">
+      <div className="flex items-center justify-center gap-1 w-full">
         <ArrowLeftCircle
           size={24}
           className={`cursor-pointer ${glyphBatchIndex === 0 ? "text-gray-400" : "text-blue-500"}`}
@@ -758,7 +748,7 @@ return (
   width={glyphSize}
   height={glyphSize}
   className={`w-full h-full border ${
-    selectedGlyphId === glyph.id ? "border-blue-500 border-2" : "border-gray-300"
+    selectedGlyphId === glyph.id ? "border-red-500 border-2" : "border-gray-300"
   } hover:border-blue-300`}
 />
           </div>
@@ -775,16 +765,16 @@ return (
         <button
           onClick={generateGlyphVariation}
           disabled={!backgroundGlyphs.some(g => g !== null)}
-          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 text-base rounded-none disabled:bg-gray-400 transition-colors"
+          className="flex-1 bg-gray-400 hover:bg-gray-500 text-white py-3 text-sm tracking-[0.1em] rounded-none disabled:bg-gray-200 transition-colors"
         >
-          Glyph
+          GLYPH
         </button>
         <button
           onClick={generateColorVariation}
           disabled={!backgroundGlyphs.some(g => g !== null)}
-          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 text-base rounded-none disabled:bg-gray-400 transition-colors"
+          className="flex-1 bg-gray-400 hover:bg-gray-500 text-white py-3 text-sm tracking-[0.1em] rounded-none disabled:bg-gray-200 transition-colors"
         >
-          Color
+          COLOR
         </button>
       </div>
       <button
@@ -794,9 +784,9 @@ return (
           backgroundColors.some(c => c !== null && c > colors.length / 3) ||
           glyphColors.some(c => c !== null && c > colors.length / 3)
         }
-        className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 text-base rounded-none disabled:bg-gray-400 transition-colors"
+        className="w-full bg-green-500 hover:bg-green-600 text-white py-3 text-base rounded-none disabled:bg-gray-200 transition-colors"
       >
-        Create
+        next
       </button>
     </div>
   );
@@ -1124,7 +1114,7 @@ setEditionAddress(newEdition);
       <button
         onClick={createEdition}
         disabled={isCreating || !canMint()}
-        className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 text-base rounded-none disabled:bg-gray-400 transition-colors"
+        className="w-full bg-green-500 hover:bg-green-600 text-white py-3 text-base rounded-none disabled:bg-gray-400 transition-colors"
       >
         {isCreating ? "Deploying..." : "Deploy"}
       </button>
