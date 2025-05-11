@@ -661,7 +661,7 @@ function Editor({
     }
   };
 
-  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+  const handleTouchStart = (_e: React.TouchEvent<HTMLCanvasElement>) => {
     if (e.touches.length === 2) {
       handleDoubleTap(e);
       return;
