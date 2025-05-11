@@ -745,14 +745,16 @@ function Editor({
               console.log("Glyph selected:", { glyphId: glyph.id, selectedGlyphId: glyph.id });
             }}
           >
-            <canvas
-              ref={(el) => (glyphCanvasRefs.current[index] = el)}
-              width={glyphSize}
-              height={glyphSize}
-              className={`w-full h-full border ${
-                selectedGlyphId === glyph.id ? "border-blue-500 border-2" : "border-gray-300"
-              } hover:border-blue-300`}
-            />
+<canvas
+  ref={(el) => {
+    glyphCanvasRefs.current[index] = el;
+  }}
+  width={glyphSize}
+  height={glyphSize}
+  className={`w-full h-full border ${
+    selectedGlyphId === glyph.id ? "border-blue-500 border-2" : "border-gray-300"
+  } hover:border-blue-300`}
+/>
           </div>
         ))}
         <ArrowRightCircle
