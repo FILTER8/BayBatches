@@ -646,9 +646,9 @@ const keepDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<H
   }
 };
 
-const stopDrawing = (e: React.TouchEvent<HTMLCanvasElement>) => {
+const stopDrawing = (e?: React.TouchEvent<HTMLCanvasElement> | React.MouseEvent<HTMLCanvasElement>) => {
   isDrawing.current = false;
-  if (e) {
+  if (e && 'touches' in e) {
     e.preventDefault();
   }
 };
@@ -665,12 +665,7 @@ const stopDrawing = (e: React.TouchEvent<HTMLCanvasElement>) => {
     }
   };
 
-const stopDrawing = (e?: React.TouchEvent<HTMLCanvasElement> | React.MouseEvent<HTMLCanvasElement>) => {
-  isDrawing.current = false;
-  if (e && 'touches' in e) {
-    e.preventDefault();
-  }
-};
+
 
 return (
   <div className="space-y-4 w-full">
