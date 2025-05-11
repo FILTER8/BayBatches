@@ -1038,11 +1038,12 @@ setEditionAddress(newEdition);
           const artTx = await writeContractAsync(config);
           console.log("Set base art transaction:", artTx);
           setArtTxHash(artTx);
-        } catch (error) {
-          console.error("Set base art failed:", error);
-          setError("Failed to set base art: " + (error.message || "Unknown error"));
-          setIsCreating(false);
-        }
+} catch (error) {
+  console.error("Set base art failed:", error);
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  setError("Failed to set base art: " + (errorMessage || "Unknown error"));
+  setIsCreating(false);
+}
       };
 
       setBaseArt();
