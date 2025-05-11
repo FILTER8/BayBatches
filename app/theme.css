@@ -105,6 +105,12 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+
+  textarea {
+    resize: none;
+    height: 5rem; /* Matches Tailwind's h-20 (80px) */
+    overflow-y: auto;
+  }
 }
 
 .animate-fade-in {
