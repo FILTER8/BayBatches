@@ -24,7 +24,7 @@ interface TokenURIResult {
 
 const useNFTURI = (address: string, tokenId: number, skip: boolean = false, alchemyUrl?: string, isReady: boolean = true): string | null => {
   const cacheKey = `${address}:${tokenId}`;
-  const { data, error } = useReadContract({
+  const { data, error: contractError } = useReadContract({
     address: address as `0x${string}`,
     abi: editionAbi.abi,
     functionName: 'tokenURI',
@@ -63,13 +63,13 @@ const useNFTURI = (address: string, tokenId: number, skip: boolean = false, alch
       return null;
     }
     if (alchemyData) return alchemyData;
-    if (data && !error) {
+    if (data && !contractError) {
       const uri = typeof data === 'string' ? data : null;
-      console.log(`Wagmi tokenURI for ${cacheKey}: ${uri}, error: ${error?.message || 'none'}`);
+      console.log(`Wagmi tokenURI for ${cacheKey}: ${uri}, error: ${contractError ? contractError.message : 'none'}`);
       return uri;
     }
     return null;
-  }, [data, error, alchemyData, isReady, cacheKey]);
+  }, [data, contractError, alchemyData, isReady, cacheKey]);
 };
 
 const processTokenURI = async (uri: string): Promise<TokenURIResult> => {
