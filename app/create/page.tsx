@@ -927,17 +927,17 @@ function DeploymentScreen({
 
   useEffect(() => {
     if (receipt && !editionAddress && txHash) {
-      const editionCreatedLog = receipt.logs.find(
+const editionCreatedLog = receipt.logs.find(
   log =>
     log.address.toLowerCase() === FACTORY_ADDRESS.toLowerCase() &&
     log.topics[0] === ethers.id("EditionCreated(address,address)")
 );
-if (!editionCreatedLog) {
+if (!editionCreatedLog || !editionCreatedLog.topics[2]) {
   setError("Failed to find edition address");
   setIsCreating(false);
   return;
 }
-const newEdition = "0x" + editionCreatedLog!.topics[2].slice(-40);
+const newEdition = "0x" + editionCreatedLog.topics[2].slice(-40);
 setEditionAddress(newEdition);
 
       const setBaseArt = async () => {
