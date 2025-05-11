@@ -665,7 +665,14 @@ const stopDrawing = (e?: React.TouchEvent<HTMLCanvasElement> | React.MouseEvent<
     }
   };
 
-
+const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+  if (e.touches.length === 2) {
+    handleDoubleTap();
+    return;
+  }
+  e.preventDefault();
+  startDrawing(e);
+};
 
 return (
   <div className="space-y-4 w-full">
