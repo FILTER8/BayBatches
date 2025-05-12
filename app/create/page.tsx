@@ -68,9 +68,9 @@ export default function Create() {
   const [selectedGlyphId, setSelectedGlyphId] = useState<number>(0); // Start with erase
   const [glyphBatchIndex, setGlyphBatchIndex] = useState<number>(0);
   const [editionSize, setEditionSize] = useState<number>(1);
-  const [name, setName] = useState<string>("");
-  const [symbol, setSymbol] = useState<string>("");
-  const [description, setDescription] = useState<string>("A unique 9x9 pixel artwork created on Warpcast.");
+  const [name, setName] = useState<string>("BaseBatches");
+  const [symbol, setSymbol] = useState<string>("BB");
+  const [description, setDescription] = useState<string>("Created on Base, shaped by many. Stored as code, shared as art.");
   const [txHash, setTxHash] = useState<string | null>(null);
   const [artTxHash, setArtTxHash] = useState<string | null>(null);
   const [editionAddress, setEditionAddress] = useState<string | null>(null);
@@ -135,9 +135,9 @@ export default function Create() {
     const randomNum = getRandomInt(1000, 9999);
     setGlyphBatchIndex(0);
     setEditionSize(1);
-    setName(`Pixel Art #${randomNum}`);
-    setSymbol(`PXL${randomNum}`);
-    setDescription("A unique 9x9 pixel artwork created on Warpcast.");
+    setName("BaseBatches");
+    setSymbol("BB");
+    setDescription("Created on Base, shaped by many. Stored as code, shared as art.");
     setPage(1);
     setTxHash(null);
     setArtTxHash(null);
@@ -1080,7 +1080,7 @@ setEditionAddress(newEdition);
           onChange={e => setName(e.target.value)}
           placeholder="e.g. Pixel Art #1234"
           className="w-full border border-gray-300 p-2 placeholder-gray-400 resize-none text-base"
-          style={{ fontSize: '16px', touchAction: 'manipulation' }}
+          style={{ fontSize: '14px', touchAction: 'manipulation' }}
         />
       </div>
       <div>
@@ -1090,7 +1090,7 @@ setEditionAddress(newEdition);
           onChange={e => setSymbol(e.target.value)}
           placeholder="e.g. PXL1234"
           className="w-full border border-gray-300 p-2 placeholder-gray-400 resize-none text-base"
-          style={{ fontSize: '16px', touchAction: 'manipulation' }}
+          style={{ fontSize: '14px', touchAction: 'manipulation' }}
         />
       </div>
       <div>
@@ -1100,7 +1100,7 @@ setEditionAddress(newEdition);
           onChange={e => setDescription(e.target.value)}
           placeholder="Describe your artwork"
           className="w-full border border-gray-300 p-2 h-20 placeholder-gray-400 resize-none text-base"
-          style={{ fontSize: '16px', touchAction: 'manipulation' }}
+          style={{ fontSize: '14px', touchAction: 'manipulation' }}
         />
       </div>
       <div>
