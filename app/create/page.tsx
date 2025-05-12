@@ -405,28 +405,17 @@ function Editor({
         .map(c => c!)
     );
 
-    // Determine available colors
-    const allColorIds = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-    const unusedColorIds = allColorIds.filter(id => !usedColorIds.has(id));
-
     // Create color mapping
     const colorMap: { [key: number]: number } = {};
-    if (usedColorIds.size === 9) {
-      // Shuffle all colors
-      const shuffled = [...allColorIds].sort(() => Math.random() - 0.5);
+    const allColorIds = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    if (usedColorIds.size > 0) {
+      // Shuffle all colors and select the first `usedColorIds.size` colors
+      const shuffledColors = [...allColorIds].sort(() => Math.random() - 0.5);
+      const targetColors = shuffledColors.slice(0, usedColorIds.size);
+      
+      // Map each used color to a unique target color
       Array.from(usedColorIds).forEach((id, i) => {
-        colorMap[id] = shuffled[i];
-      });
-    } else {
-      // Select min(used count, unused count) random unused colors
-      const count = Math.min(usedColorIds.size, unusedColorIds.length);
-      const selectedColors = unusedColorIds
-        .sort(() => Math.random() - 0.5)
-        .slice(0, count);
-      let i = 0;
-      usedColorIds.forEach(id => {
-        colorMap[id] = selectedColors[i % selectedColors.length];
-        i++;
+        colorMap[id] = targetColors[i];
       });
     }
 
@@ -451,6 +440,7 @@ function Editor({
     setBackgroundGlyphs(newBgGlyphs);
     debouncedRedraw();
     console.log("Generated color variation:", {
+      usedColorIds: Array.from(usedColorIds),
       colorMap,
       newBgColors,
       newFgColors,
