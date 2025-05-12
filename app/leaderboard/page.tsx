@@ -32,14 +32,12 @@ interface User {
 interface Profile {
   username: string;
   avatarUrl: string;
-  basename: string | null;
 }
 
 interface LeaderboardEntry {
   walletAddress: string;
   username: string;
   avatarUrl: string;
-  basename: string | null;
   tokensOwnedCount: number;
   editionsCreatedCount: number;
 }
@@ -57,47 +55,52 @@ export default function LeaderboardPage() {
       editionsCreatedCount: number;
     }>
   >([]);
+  const [addresses, setAddresses] = useState<string[]>([]);
 
-useEffect(() => {
-  if (data) {
-    console.log('Subgraph data:', JSON.stringify(data, null, 2));
-    const addresses = data.users
-      .filter(
-        (user) => (user.tokensOwned?.length || 0) > 0 || (user.editionsCreated?.length || 0) > 0
-      )
-      .map((user) => user.id);
-    console.log('Filtered addresses for profiles:', addresses);
-    if (addresses.length > 0) {
-      getUserProfiles(addresses)
-        .then((fetchedProfiles) => {
-          // Transform profiles to match Profile interface
-          const profiles: Record<string, Profile> = Object.entries(fetchedProfiles).reduce(
-            (acc, [address, profile]) => {
-              acc[address] = {
-                username: profile.username,
-                avatarUrl: profile.avatarUrl,
-                basename: null, // Add basename explicitly
-              };
-              return acc;
-            },
-            {} as Record<string, Profile>
-          );
-          console.log('Fetched profiles:', JSON.stringify(profiles, null, 2));
-          setProfiles(profiles);
-        })
-        .catch((err) => {
-          console.error('Failed to fetch profiles:', err);
-          setProfileError('Failed to load user profiles');
-        });
-    } else {
-      console.log('No users with tokens or editions found');
-    }
+  useEffect(() => {
+    if (data) {
+      console.log('Subgraph data:', JSON.stringify(data, null, 2));
+      const userAddresses = data.users
+        .filter(
+          (user) => (user.tokensOwned?.length || 0) > 0 || (user.editionsCreated?.length || 0) > 0
+        )
+        .map((user) => user.id);
+      console.log('Filtered addresses for profiles:', userAddresses);
+      setAddresses(userAddresses);
 
-      // Filter tokens and editions
+      if (userAddresses.length > 0) {
+        const batchSize = 50;
+        const batches = [];
+        for (let i = 0; i < userAddresses.length; i += batchSize) {
+          batches.push(userAddresses.slice(i, i + batchSize));
+        }
+        const profilePromises = batches.map(batch =>
+          getUserProfiles(batch).catch(err => {
+            console.error('Failed to fetch batch:', err);
+            return {};
+          })
+        );
+        Promise.all(profilePromises)
+          .then((profileResults) => {
+            const fetchedProfiles = profileResults.reduce((acc, profiles) => ({ ...acc, ...profiles }), {});
+            console.log('Fetched profiles:', JSON.stringify(fetchedProfiles, null, 2));
+            const missing = userAddresses.filter(addr => !fetchedProfiles[addr]);
+            if (missing.length > 0) {
+              console.warn('Addresses missing profiles:', missing);
+            }
+            setProfiles(fetchedProfiles);
+          })
+          .catch((err) => {
+            console.error('Failed to fetch profiles:', err);
+            setProfileError('Failed to load user profiles');
+          });
+      } else {
+        console.log('No users with tokens or editions found');
+      }
+
       const filterData = async () => {
         const filtered = await Promise.all(
           data.users.map(async (user) => {
-            // Filter tokensOwned, excluding tokenId #1
             let filteredTokensOwned: Token[] = [];
             if (user.tokensOwned?.length > 0) {
               const tokenResults = await Promise.allSettled(
@@ -116,7 +119,6 @@ useEffect(() => {
                 .map((result) => result.value.token);
             }
 
-            // Filter editionsCreated
             let filteredEditionsCreated: Edition[] = [];
             if (user.editionsCreated?.length > 0) {
               const editionResults = await Promise.allSettled(
@@ -155,7 +157,6 @@ useEffect(() => {
         walletAddress: user.id,
         username: profiles[user.id]?.username || user.id.slice(0, 6),
         avatarUrl: profiles[user.id]?.avatarUrl || 'https://bay-batches.vercel.app/splashicon.png',
-        basename: profiles[user.id]?.basename || null,
         tokensOwnedCount: user.tokensOwnedCount,
         editionsCreatedCount: user.editionsCreatedCount,
       }))
@@ -169,7 +170,6 @@ useEffect(() => {
         walletAddress: user.id,
         username: profiles[user.id]?.username || user.id.slice(0, 6),
         avatarUrl: profiles[user.id]?.avatarUrl || 'https://bay-batches.vercel.app/splashicon.png',
-        basename: profiles[user.id]?.basename || null,
         tokensOwnedCount: user.tokensOwnedCount,
         editionsCreatedCount: user.editionsCreatedCount,
       }))
@@ -199,13 +199,20 @@ useEffect(() => {
           ) : queryError ? (
             <div className="text-center text-red-500">Error: {queryError.message}</div>
           ) : profileError ? (
-            <div className="text-center text-red-500">{profileError}</div>
+            <div className="text-center text-red-500">
+              {profileError}. Some profiles may display wallet addresses.
+            </div>
           ) : !data?.users?.length ? (
             <div className="text-center text-gray-500">No users found in the subgraph</div>
           ) : !mostCollected.length && !mostCreated.length ? (
             <div className="text-center text-gray-500">No users found with tokens or editions</div>
           ) : (
             <div className="mt-2">
+              {Object.keys(profiles).length < addresses.length && !profileError && (
+                <div className="text-center text-gray-500 mb-2">
+
+                </div>
+              )}
               <Leaderboard mostCollected={mostCollected} mostCreated={mostCreated} />
               <PageFooter pageName="LEADERBOARD" />
             </div>

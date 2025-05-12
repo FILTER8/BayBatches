@@ -8,7 +8,6 @@ interface LeaderboardEntry {
   walletAddress: string;
   username: string;
   avatarUrl: string;
-  basename: string | null;
   tokensOwnedCount: number;
   editionsCreatedCount: number;
 }
@@ -59,15 +58,15 @@ export function Leaderboard({ mostCollected, mostCreated }: LeaderboardProps) {
               onClick={() => router.push(`/user/${entry.walletAddress}`)}
             >
               <Image
-                src={entry.avatarUrl || 'https://default-avatar.png'}
-                alt={entry.basename || entry.username || entry.walletAddress}
+                src={entry.avatarUrl}
+                alt={entry.username || entry.walletAddress}
                 width={32}
                 height={32}
                 className="rounded-full"
                 unoptimized
               />
               <span className="text-sm font-medium truncate">
-                {entry.basename || entry.username || entry.walletAddress.slice(0, 6)}
+                {entry.username || entry.walletAddress.slice(0, 6)}
               </span>
               <span className="text-sm ml-auto">
                 {tab === 'collected'

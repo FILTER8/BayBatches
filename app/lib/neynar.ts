@@ -1,4 +1,8 @@
-const profileCache = new Map<string, { username: string; avatarUrl: string }>();
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+const profileCache = new Map<
+  string,
+  { username: string; avatarUrl: string; timestamp: number }
+>();
 
 interface UserProfile {
   username: string;
@@ -9,9 +13,11 @@ interface UserProfile {
 
 export async function getUserProfile(walletAddress: string) {
   const lowerAddress = walletAddress.toLowerCase();
-  if (profileCache.has(lowerAddress)) {
+  if (profileCache.has(lowerAddress) && Date.now() - profileCache.get(lowerAddress)!.timestamp < CACHE_TTL) {
+    console.log(`Cache hit for profile: ${lowerAddress}`);
     return profileCache.get(lowerAddress)!;
   }
+  console.log(`Cache miss for profile: ${lowerAddress}`);
   try {
     const response = await fetch(`/api/profiles?address=${encodeURIComponent(lowerAddress)}`);
     if (!response.ok) {
@@ -22,15 +28,15 @@ export async function getUserProfile(walletAddress: string) {
       username: user?.username || user?.display_name || walletAddress.slice(0, 6),
       avatarUrl: user?.pfp_url || 'https://bay-batches.vercel.app/splashicon.png',
     };
-    profileCache.set(lowerAddress, profile);
+    profileCache.set(lowerAddress, { ...profile, timestamp: Date.now() });
     return profile;
   } catch (error) {
     console.error(`Failed to fetch profile for ${walletAddress}:`, error);
     const profile = {
       username: walletAddress.slice(0, 6),
-      avatarUrl: 'https://splashicon.png',
+      avatarUrl: 'https://bay-batches.vercel.app/splashicon.png',
     };
-    profileCache.set(lowerAddress, profile);
+    profileCache.set(lowerAddress, { ...profile, timestamp: Date.now() });
     return profile;
   }
 }
@@ -38,32 +44,52 @@ export async function getUserProfile(walletAddress: string) {
 export async function getUserProfiles(walletAddresses: string[]): Promise<Record<string, { username: string; avatarUrl: string }>> {
   try {
     const lowerAddresses = walletAddresses.map((addr) => addr.toLowerCase());
+    const cachedProfiles: Record<string, { username: string; avatarUrl: string }> = {};
+    const addressesToFetch: string[] = [];
+
+    for (const addr of lowerAddresses) {
+      if (profileCache.has(addr) && Date.now() - profileCache.get(addr)!.timestamp < CACHE_TTL) {
+        console.log(`Cache hit for profile: ${addr}`);
+        cachedProfiles[addr] = profileCache.get(addr)!;
+      } else {
+        console.log(`Cache miss for profile: ${addr}`);
+        addressesToFetch.push(addr);
+      }
+    }
+
+    if (addressesToFetch.length === 0) {
+      return cachedProfiles;
+    }
+
     const response = await fetch('/api/profiles', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ addresses: lowerAddresses }),
+      body: JSON.stringify({ addresses: addressesToFetch }),
     });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const profiles: Record<string, UserProfile> = await response.json();
     for (const [address, user] of Object.entries(profiles) as [string, UserProfile][]) {
-      profileCache.set(address, {
+      const profile = {
         username: user.username || user.display_name || address.slice(0, 6),
         avatarUrl: user.pfp_url || 'https://bay-batches.vercel.app/splashicon.png',
-      });
+      };
+      profileCache.set(address, { ...profile, timestamp: Date.now() });
+      cachedProfiles[address] = profile;
     }
-    return Object.fromEntries(
-      Object.entries(profiles).map(([address, user]) => [
-        address,
+    return cachedProfiles;
+  } catch (error) {
+    console.error('Failed to fetch bulk profiles:', error);
+    const fallbackProfiles = Object.fromEntries(
+      walletAddresses.map((addr) => [
+        addr.toLowerCase(),
         {
-          username: user.username || user.display_name || address.slice(0, 6),
-          avatarUrl: user.pfp_url || 'https://bay-batches.vercel.app/splashicon.png',
+          username: addr.slice(0, 6),
+          avatarUrl: 'https://bay-batches.vercel.app/splashicon.png',
         },
       ])
     );
-  } catch (error) {
-    console.error('Failed to fetch bulk profiles:', error);
-    return {};
+    return fallbackProfiles;
   }
 }

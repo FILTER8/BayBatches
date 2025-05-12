@@ -1,4 +1,3 @@
-// app/api/profiles/route.ts
 import { NextResponse } from 'next/server';
 import { NeynarAPIClient, Configuration, isApiErrorResponse } from '@neynar/nodejs-sdk';
 
@@ -35,6 +34,16 @@ const config = new Configuration({
 
 const client = new NeynarAPIClient(config);
 
+// Helper to validate image URLs
+async function isValidImageUrl(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(url, { method: 'HEAD' });
+    return response.ok && response.headers.get('content-type')?.startsWith('image/');
+  } catch {
+    return false;
+  }
+}
+
 // Helper to resolve FIDs from addresses
 async function resolveFidsFromAddresses(addresses: string[]): Promise<Record<string, number>> {
   try {
@@ -42,7 +51,7 @@ async function resolveFidsFromAddresses(addresses: string[]): Promise<Record<str
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'api_key': process.env.NEYNAR_API_KEY!, // Assert defined
+        'api_key': process.env.NEYNAR_API_KEY!,
         'x-neynar-experimental': 'true',
       },
       body: JSON.stringify({ addresses: addresses.map(addr => addr.toLowerCase()) }),
@@ -60,7 +69,7 @@ async function resolveFidsFromAddresses(addresses: string[]): Promise<Record<str
       return acc;
     }, {});
   } catch (error) {
-    console.error('Failed to resolve FIDs from addresses:', error);
+    console.error('Failed to resolve FIDs from addresses:', { error, addresses });
     return {};
   }
 }
@@ -74,7 +83,6 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Resolve FID from address
     const fidMap = await resolveFidsFromAddresses([address.toLowerCase()]);
     const fid = fidMap[address.toLowerCase()];
     if (!fid) {
@@ -89,19 +97,22 @@ export async function GET(request: Request) {
       return NextResponse.json(null);
     }
 
+    const pfpUrl = user.pfp_url && (await isValidImageUrl(user.pfp_url)) 
+      ? user.pfp_url 
+      : 'https://bay-batches.vercel.app/splashicon.png';
+
     return NextResponse.json({
       username: user.username || address.slice(0, 6),
       display_name: user.display_name || user.username || address.slice(0, 6),
-      pfp_url: user.pfp_url || '/splashicon.png',
+      pfp_url: pfpUrl,
       address: user.verifications?.[0] || address,
     });
   } catch (error) {
-    if (isApiErrorResponse(error)) {
-      console.error(`Failed to fetch profile for ${address}:`, error.response.data);
-    } else {
-      console.error(`Failed to fetch profile for ${address}:`, error);
-    }
-    return NextResponse.json({ error: 'Failed to fetch profile', details: String(error) }, { status: 500 });
+    const errorDetails = isApiErrorResponse(error) 
+      ? { message: error.response.data.message, status: error.response.status }
+      : { message: String(error) };
+    console.error(`Failed to fetch profile for ${address}:`, errorDetails);
+    return NextResponse.json({ error: 'Failed to fetch profile', details: errorDetails.message }, { status: 500 });
   }
 }
 
@@ -112,7 +123,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Addresses array is required' }, { status: 400 });
     }
 
-    // Resolve FIDs from addresses
     const lowerAddresses = addresses.map((addr: string) => addr.toLowerCase());
     const fidMap = await resolveFidsFromAddresses(lowerAddresses);
     const fids = lowerAddresses
@@ -128,10 +138,13 @@ export async function POST(request: Request) {
     const profiles = response.users.reduce((acc: Record<string, UserProfile>, user: NeynarUser) => {
       const address = user.verifications?.[0]?.toLowerCase() || lowerAddresses.find(addr => fidMap[addr] === user.fid);
       if (address) {
+        const pfpUrl = user.pfp_url && isValidImageUrl(user.pfp_url)
+          ? user.pfp_url
+          : 'https://bay-batches.vercel.app/splashicon.png';
         acc[address] = {
           username: user.username || address.slice(0, 6),
           display_name: user.display_name || user.username || address.slice(0, 6),
-          pfp_url: user.pfp_url || '/splashicon.png',
+          pfp_url: pfpUrl,
           address,
         };
       }
@@ -144,7 +157,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json(profiles);
   } catch (error) {
-    console.error('Failed to fetch bulk profiles:', error);
-    return NextResponse.json({ error: 'Failed to fetch profiles', details: String(error) }, { status: 500 });
+    const errorDetails = isApiErrorResponse(error) 
+      ? { message: error.response.data.message, status: error.response.status }
+      : { message: String(error) };
+    console.error('Failed to fetch bulk profiles:', errorDetails);
+    return NextResponse.json({ error: 'Failed to fetch profiles', details: errorDetails.message }, { status: 500 });
   }
 }
