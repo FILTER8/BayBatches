@@ -1135,7 +1135,7 @@ function DeploymentScreen({
         />
         <p className="text-sm text-center">{editionSize}</p>
       </div>
-      <p className="text-base font-bold text-gray-700">
+      <p className="text-sm text-gray-700">
         Creation: 0.0004 ETH (contract) | Collect: 0.0004 ETH
       </p>
       <button
@@ -1168,7 +1168,7 @@ function DeploymentScreen({
             {isCreating ? 'Creating Edition...' : 'Finalizing Artwork...'}
           </span>
         ) : (
-          'Deploy'
+          'Deploy (0.0004)'
         )}
       </button>
       {error && <p className="text-red-500 text-sm">{error}</p>}
