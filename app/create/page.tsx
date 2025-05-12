@@ -308,6 +308,7 @@ function Editor({
   const scale = 48;
   const glyphSize = 16;
   const isDrawing = useRef(false);
+  const lastTap = useRef<number>(0);
 
   const TYPO_VARIATIONS = [
     [16, 17, 18, 19, 20, 21, 22], // Variation 1: B, A, T, C, H, E, S
