@@ -16,7 +16,15 @@ export default function UserProfilePage() {
   useEffect(() => {
     if (walletAddress) {
       getUserProfile(walletAddress)
-        .then(setProfile)
+        .then((fetchedProfile) => {
+          // Transform the profile to match the expected type
+          const transformedProfile = {
+            username: fetchedProfile.username,
+            avatarUrl: fetchedProfile.avatarUrl,
+            basename: fetchedProfile.basename || null, // Add basename explicitly
+          };
+          setProfile(transformedProfile);
+        })
         .catch((err) => {
           console.error(`Failed to fetch profile for ${walletAddress}:`, err);
           setError('Failed to load user profile');
