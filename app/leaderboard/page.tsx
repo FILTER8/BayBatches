@@ -58,28 +58,40 @@ export default function LeaderboardPage() {
     }>
   >([]);
 
-  useEffect(() => {
-    if (data) {
-      console.log('Subgraph data:', JSON.stringify(data, null, 2));
-      const addresses = data.users
-        .filter(
-          (user) => (user.tokensOwned?.length || 0) > 0 || (user.editionsCreated?.length || 0) > 0
-        )
-        .map((user) => user.id);
-      console.log('Filtered addresses for profiles:', addresses);
-      if (addresses.length > 0) {
-        getUserProfiles(addresses)
-          .then((profiles) => {
-            console.log('Fetched profiles:', JSON.stringify(profiles, null, 2));
-            setProfiles(profiles);
-          })
-          .catch((err) => {
-            console.error('Failed to fetch profiles:', err);
-            setProfileError('Failed to load user profiles');
-          });
-      } else {
-        console.log('No users with tokens or editions found');
-      }
+useEffect(() => {
+  if (data) {
+    console.log('Subgraph data:', JSON.stringify(data, null, 2));
+    const addresses = data.users
+      .filter(
+        (user) => (user.tokensOwned?.length || 0) > 0 || (user.editionsCreated?.length || 0) > 0
+      )
+      .map((user) => user.id);
+    console.log('Filtered addresses for profiles:', addresses);
+    if (addresses.length > 0) {
+      getUserProfiles(addresses)
+        .then((fetchedProfiles) => {
+          // Transform profiles to match Profile interface
+          const profiles: Record<string, Profile> = Object.entries(fetchedProfiles).reduce(
+            (acc, [address, profile]) => {
+              acc[address] = {
+                username: profile.username,
+                avatarUrl: profile.avatarUrl,
+                basename: null, // Add basename explicitly
+              };
+              return acc;
+            },
+            {} as Record<string, Profile>
+          );
+          console.log('Fetched profiles:', JSON.stringify(profiles, null, 2));
+          setProfiles(profiles);
+        })
+        .catch((err) => {
+          console.error('Failed to fetch profiles:', err);
+          setProfileError('Failed to load user profiles');
+        });
+    } else {
+      console.log('No users with tokens or editions found');
+    }
 
       // Filter tokens and editions
       const filterData = async () => {
