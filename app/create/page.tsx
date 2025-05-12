@@ -650,13 +650,19 @@ const getCanvasPosition = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchE
     }
   };
 
-  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
     e.preventDefault(); // Prevent scrolling on touch
-    if (e.touches.length === 2) {
-      handleDoubleTap();
-      return;
+    if (e.touches.length === 1) {
+      const currentTime = new Date().getTime();
+      const tapInterval = currentTime - lastTap.current;
+      if (tapInterval < 300 && tapInterval > 0) {
+        handleDoubleTap();
+        lastTap.current = 0; // Reset to prevent multiple triggers
+        return;
+      }
+      lastTap.current = currentTime;
+      startDrawing(e);
     }
-    startDrawing(e);
   };
 
   return (
