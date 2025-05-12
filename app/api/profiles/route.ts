@@ -38,7 +38,8 @@ const client = new NeynarAPIClient(config);
 async function isValidImageUrl(url: string): Promise<boolean> {
   try {
     const response = await fetch(url, { method: 'HEAD' });
-    return response.ok && response.headers.get('content-type')?.startsWith('image/');
+    const contentType = response.headers.get('content-type');
+    return response.ok && contentType !== null && contentType.startsWith('image/');
   } catch {
     return false;
   }
@@ -138,7 +139,7 @@ export async function POST(request: Request) {
     const profiles = response.users.reduce((acc: Record<string, UserProfile>, user: NeynarUser) => {
       const address = user.verifications?.[0]?.toLowerCase() || lowerAddresses.find(addr => fidMap[addr] === user.fid);
       if (address) {
-        const pfpUrl = user.pfp_url && isValidImageUrl(user.pfp_url)
+        const pfpUrl = user.pfp_url && (await isValidImageUrl(user.pfp_url))
           ? user.pfp_url
           : 'https://bay-batches.vercel.app/splashicon.png';
         acc[address] = {
