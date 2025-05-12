@@ -21,7 +21,7 @@ export default function UserProfilePage() {
           const transformedProfile = {
             username: fetchedProfile.username,
             avatarUrl: fetchedProfile.avatarUrl,
-            basename: fetchedProfile.basename || null, // Add basename explicitly
+            basename: null, // Set basename to null since it's not provided by getUserProfile
           };
           setProfile(transformedProfile);
         })
