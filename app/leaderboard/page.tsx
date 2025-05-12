@@ -77,12 +77,12 @@ export default function LeaderboardPage() {
         const profilePromises = batches.map(batch =>
           getUserProfiles(batch).catch(err => {
             console.error('Failed to fetch batch:', err);
-            return {};
+            return {} as Record<string, Profile>;
           })
         );
         Promise.all(profilePromises)
           .then((profileResults) => {
-            const fetchedProfiles = profileResults.reduce((acc, profiles) => ({ ...acc, ...profiles }), {});
+            const fetchedProfiles = profileResults.reduce((acc, profiles) => ({ ...acc, ...profiles }), {} as Record<string, Profile>);
             console.log('Fetched profiles:', JSON.stringify(fetchedProfiles, null, 2));
             const missing = userAddresses.filter(addr => !fetchedProfiles[addr]);
             if (missing.length > 0) {
@@ -210,7 +210,7 @@ export default function LeaderboardPage() {
             <div className="mt-2">
               {Object.keys(profiles).length < addresses.length && !profileError && (
                 <div className="text-center text-gray-500 mb-2">
-
+                  Some users may display wallet addresses due to missing Farcaster profiles.
                 </div>
               )}
               <Leaderboard mostCollected={mostCollected} mostCreated={mostCreated} />
