@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense,useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useWriteContract, useWaitForTransactionReceipt, useAccount, usePublicClient } from "wagmi";
 import { baseSepolia } from "wagmi/chains";
 import { ethers } from "ethers";
