@@ -52,13 +52,12 @@ export function Leaderboard({ mostCollected, mostCreated }: LeaderboardProps) {
         {entries.length === 0 ? (
           <p className="text-sm text-gray-500 text-center">No data available</p>
         ) : (
-          entries.map((entry, index) => (
+          entries.map((entry) => (
             <div
               key={entry.walletAddress}
               className="flex items-center gap-2 p-2 w-full h-11 border border-gray-300 cursor-pointer hover:bg-gray-100"
               onClick={() => router.push(`/user/${entry.walletAddress}`)}
             >
-              <span className="text-sm font-bold w-6">{`${index + 1}.`}</span>
               <Image
                 src={entry.avatarUrl || 'https://default-avatar.png'}
                 alt={entry.basename || entry.username || entry.walletAddress}
