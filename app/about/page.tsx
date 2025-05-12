@@ -19,52 +19,54 @@ const DEFAULT_COLORS = [
 
 export default function About() {
   // Glyph separator: 9 glyphs with background (solid block) and foreground glyph
-  const GlyphSeparator = ({ glyphId, fgColorIndices, bgColorIndices }: {
-    glyphId: number;
-    fgColorIndices: [number, number, number];
-    bgColorIndices: [number, number, number];
-  }) => {
-    const canvasRefs = useRef<(HTMLCanvasElement | null)[]>(Array(9).fill(null));
-    const glyph = glyphsData.find(g => g.id === glyphId);
-    const bitmap = glyph ? BigInt(glyph.bitmap) : BigInt(0); // Fallback to empty
+const GlyphSeparator = ({ glyphId, fgColorIndices, bgColorIndices }: {
+  glyphId: number;
+  fgColorIndices: [number, number, number];
+  bgColorIndices: [number, number, number];
+}) => {
+  const canvasRefs = useRef<(HTMLCanvasElement | null)[]>(Array(9).fill(null));
+  const glyph = glyphsData.find(g => g.id === glyphId);
+  const bitmap = glyph ? BigInt(glyph.bitmap) : BigInt(0);
 
-    useEffect(() => {
-      canvasRefs.current.forEach((canvas) => {
-        if (canvas) {
-          const ctx = canvas.getContext('2d')!;
-          ctx.clearRect(0, 0, 16, 16);
+  useEffect(() => {
+    canvasRefs.current.forEach((canvas) => {
+      if (canvas) {
+        const ctx = canvas.getContext('2d')!;
+        ctx.clearRect(0, 0, 16, 16);
 
-          // Draw background glyph (solid block, ID 1)
-          ctx.fillStyle = `rgb(${DEFAULT_COLORS[bgColorIndices[0]]}, ${DEFAULT_COLORS[bgColorIndices[1]]}, ${DEFAULT_COLORS[bgColorIndices[2]]})`;
-          ctx.fillRect(0, 0, 16, 16); // Solid block fills entire canvas
+        // Draw background glyph (solid block, ID 1)
+        ctx.fillStyle = `rgb(${DEFAULT_COLORS[bgColorIndices[0]]}, ${DEFAULT_COLORS[bgColorIndices[1]]}, ${DEFAULT_COLORS[bgColorIndices[2]]})`;
+        ctx.fillRect(0, 0, 16, 16);
 
-          // Draw foreground glyph
-          ctx.fillStyle = `rgb(${DEFAULT_COLORS[fgColorIndices[0]]}, ${DEFAULT_COLORS[fgColorIndices[1]]}, ${DEFAULT_COLORS[fgColorIndices[2]]})`;
-          for (let y = 0; y < 8; y++) {
-            for (let x = 0; x < 8; x++) {
-              if ((bitmap & (BigInt(1) << BigInt(63 - (y * 8 + x)))) !== BigInt(0)) {
-                ctx.fillRect(x * 2, y * 2, 2, 2);
-              }
+        // Draw foreground glyph
+        ctx.fillStyle = `rgb(${DEFAULT_COLORS[fgColorIndices[0]]}, ${DEFAULT_COLORS[fgColorIndices[1]]}, ${DEFAULT_COLORS[fgColorIndices[2]]})`;
+        for (let y = 0; y < 8; y++) {
+          for (let x = 0; x < 8; x++) {
+            if ((bitmap & (BigInt(1) << BigInt(63 - (y * 8 + x)))) !== BigInt(0)) {
+              ctx.fillRect(x * 2, y * 2, 2, 2);
             }
           }
         }
-      });
-    }, [glyphId, fgColorIndices, bgColorIndices, bitmap]);
+      }
+    });
+  }, [glyphId, fgColorIndices, bgColorIndices, bitmap]);
 
-    return (
-      <div className="flex justify-center my-4">
-        {Array(9).fill(0).map((_, i) => (
-          <canvas
-            key={i}
-            ref={(el) => (canvasRefs.current[i] = el)}
-            width={16}
-            height={16}
-            className="w-4 h-4"
-          />
-        ))}
-      </div>
-    );
-  };
+  return (
+    <div className="flex justify-center my-4">
+      {Array(9).fill(0).map((_, i) => (
+        <canvas
+          key={i}
+          ref={(el) => {
+            canvasRefs.current[i] = el; // No return value
+          }}
+          width={16}
+          height={16}
+          className="w-4 h-4"
+        />
+      ))}
+    </div>
+  );
+};
 
   return (
     <div className="flex flex-col min-h-screen font-sans text-[var(--app-foreground)] mini-app-theme from-[var(--app-background)] to-[var(--app-gray)]">
