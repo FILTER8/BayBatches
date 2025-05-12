@@ -1031,7 +1031,7 @@ setEditionAddress(newEdition);
               0,
               GLYPH_SET_ADDRESS,
             ],
-            gas: BigInt(3200000), // Fixed gas limit to cover complex inputs
+            gas: BigInt(4500000), // Fixed gas limit to cover complex inputs
           };
           const artTx = await writeContractAsync(config);
           console.log("Set base art transaction:", artTx);
@@ -1079,7 +1079,8 @@ setEditionAddress(newEdition);
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="e.g. Pixel Art #1234"
-          className="w-full border border-gray-300 p-2 placeholder-gray-400 resize-none"
+          className="w-full border border-gray-300 p-2 placeholder-gray-400 resize-none text-base"
+          style={{ fontSize: '16px', touchAction: 'manipulation' }}
         />
       </div>
       <div>
@@ -1088,7 +1089,8 @@ setEditionAddress(newEdition);
           value={symbol}
           onChange={e => setSymbol(e.target.value)}
           placeholder="e.g. PXL1234"
-          className="w-full border border-gray-300 p-2 placeholder-gray-400 resize-none"
+          className="w-full border border-gray-300 p-2 placeholder-gray-400 resize-none text-base"
+          style={{ fontSize: '16px', touchAction: 'manipulation' }}
         />
       </div>
       <div>
@@ -1097,7 +1099,8 @@ setEditionAddress(newEdition);
           value={description}
           onChange={e => setDescription(e.target.value)}
           placeholder="Describe your artwork"
-          className="w-full border border-gray-300 p-2 h-20 placeholder-gray-400 resize-none"
+          className="w-full border border-gray-300 p-2 h-20 placeholder-gray-400 resize-none text-base"
+          style={{ fontSize: '16px', touchAction: 'manipulation' }}
         />
       </div>
       <div>

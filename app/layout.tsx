@@ -4,10 +4,11 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Providers } from './providers';
 
-
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1.0,
+  userScalable: false,
 };
 
 export async function generateMetadata(): Promise<Metadata> {
