@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense,useCallback, useEffect, useRef, useState } from "react";
 import { useWriteContract, useWaitForTransactionReceipt, useAccount, usePublicClient } from "wagmi";
 import { baseSepolia } from "wagmi/chains";
 import { ethers } from "ethers";
@@ -857,28 +857,36 @@ function DeploymentScreen({
     hash: artTxHash as `0x${string}`,
     chainId: baseSepolia.id,
   });
+  const [lastSetBaseArtTime, setLastSetBaseArtTime] = useState<number>(0); // For rate-limiting
+  const [isArtProcessing, setIsArtProcessing] = useState(false); // For setBaseArt
 
   const createEdition = async () => {
     if (isCreating || !canMint() || !publicClient) return;
     if (!address) {
-      setError("Please connect your wallet to deploy the artwork.");
+      setError('Please connect your wallet to deploy the artwork.');
       return;
     }
     setIsCreating(true);
     setError(null);
     try {
-      if (!name.trim()) throw new Error("Name is required");
-      if (!symbol.trim()) throw new Error("Symbol is required");
-      if (!description.trim()) throw new Error("Description is required");
+      if (!name.trim()) throw new Error('Name is required');
+      if (!symbol.trim()) throw new Error('Symbol is required');
+      if (!description.trim()) throw new Error('Description is required');
       const editionSizeNum = editionSize;
-      if (editionSizeNum < 1) throw new Error("Invalid edition size");
+      if (editionSizeNum < 1) throw new Error('Invalid edition size');
 
-      console.log("createEdition inputs:", { name, symbol, description, editionSizeNum });
+      console.log('createEdition inputs:', { name, symbol, description, editionSizeNum });
+
+      const balance = await publicClient.getBalance({ address: address as `0x${string}` });
+      const requiredFee = BigInt('400000000000000'); // 0.0004 ETH
+      if (balance < requiredFee) {
+        throw new Error('Insufficient funds for creation fee (0.0004 ETH)');
+      }
 
       const gasEstimate = await publicClient.estimateContractGas({
         address: FACTORY_ADDRESS as `0x${string}`,
         abi: factoryAbi.abi,
-        functionName: "createEdition",
+        functionName: 'createEdition',
         args: [
           name,
           symbol,
@@ -890,7 +898,8 @@ function DeploymentScreen({
           MARKETPLACE_FEE_RECEIVER,
         ],
         account: address as `0x${string}`,
-      }).catch(err => {
+        value: requiredFee,
+      }).catch((err) => {
         throw new Error(`Gas estimation failed for createEdition: ${err.message}`);
       });
       const gasWithBuffer = (gasEstimate * BigInt(200)) / BigInt(100);
@@ -899,7 +908,7 @@ function DeploymentScreen({
       const config = {
         address: FACTORY_ADDRESS as `0x${string}`,
         abi: factoryAbi.abi,
-        functionName: "createEdition",
+        functionName: 'createEdition',
         args: [
           name,
           symbol,
@@ -911,40 +920,59 @@ function DeploymentScreen({
           MARKETPLACE_FEE_RECEIVER,
         ],
         gas: gasWithBuffer,
+        value: BigInt('400000000000000'), // 0.0004 ETH creation fee
       };
       const createTx = await writeContractAsync(config);
+      console.log('createEdition transaction:', createTx);
       setTxHash(createTx);
     } catch (err: unknown) {
-      console.error("createEdition error:", err);
-      setError(`Failed to create edition: ${(err as Error).message || "Unknown error"}`);
+      console.error('createEdition error:', err);
+      setError(`Failed to create edition: ${(err as Error).message || 'Unknown error'}`);
       setIsCreating(false);
     }
   };
 
   useEffect(() => {
     if (receipt && !editionAddress && txHash) {
-const editionCreatedLog = receipt.logs.find(
-  log =>
-    log.address.toLowerCase() === FACTORY_ADDRESS.toLowerCase() &&
-    log.topics[0] === ethers.id("EditionCreated(address,address)")
-);
-if (!editionCreatedLog || !editionCreatedLog.topics[2]) {
-  setError("Failed to find edition address");
-  setIsCreating(false);
-  return;
-}
-const newEdition = "0x" + editionCreatedLog.topics[2].slice(-40);
-setEditionAddress(newEdition);
+      const editionCreatedLog = receipt.logs.find(
+        (log) =>
+          log.address.toLowerCase() === FACTORY_ADDRESS.toLowerCase() &&
+          log.topics[0] === ethers.id('EditionCreated(address,address)')
+      );
+      if (!editionCreatedLog || !editionCreatedLog.topics[2]) {
+        setError('Failed to find edition address');
+        setIsCreating(false);
+        return;
+      }
+      const newEdition = '0x' + editionCreatedLog.topics[2].slice(-40);
+      setEditionAddress(newEdition);
 
       const setBaseArt = async () => {
         try {
-          const bgGlyphs = backgroundGlyphs.map(g => g || 0);
-          const fgGlyphs = foregroundGlyphs.map(g => g || 0);
-          const bgColors = backgroundColors.map(c => c || 0);
-          const fgColors = glyphColors.map(c => c || 0);
+          // Rate-limiting: Prevent setBaseArt within 30 seconds
+          const currentTime = Date.now();
+          if (currentTime - lastSetBaseArtTime < 30000) {
+            throw new Error('Please wait 30 seconds before finalizing artwork');
+          }
+          setLastSetBaseArtTime(currentTime);
 
-          // Validate glyphs
-          const validGlyphIds = new Set(GLYPHS.map(g => g.id));
+          // Validate artwork content
+          if (!Array.isArray(colors) || colors.length === 0) {
+            throw new Error('Colors are not set for the artwork');
+          }
+          const bgGlyphs = backgroundGlyphs.map((g) => g || 0);
+          const fgGlyphs = foregroundGlyphs.map((g) => g || 0);
+          const bgColors = backgroundColors.map((c) => c || 0);
+          const fgColors = glyphColors.map((c) => c || 0);
+          const usedColorIndices = new Set<number>([...bgColors, ...fgColors].filter((c) => c > 0));
+          const usedGlyphs = new Set<number>(fgGlyphs.filter((g) => g > 0));
+          if (usedColorIndices.size === 0 || usedGlyphs.size === 0) {
+            throw new Error('Artwork must include at least one color and one glyph');
+          }
+
+          // Original setBaseArt logic (unchanged)
+          setIsArtProcessing(true);
+          const validGlyphIds = new Set(GLYPHS.map((g) => g.id));
           for (let i = 0; i < 81; i++) {
             if (bgGlyphs[i] !== 0 && bgGlyphs[i] !== 1) {
               throw new Error(`Invalid background glyph ID at index ${i}: ${bgGlyphs[i]}`);
@@ -957,21 +985,10 @@ setEditionAddress(newEdition);
             }
           }
 
-          // Collect used color indices
-          const usedColorIndices = new Set<number>([...bgColors, ...fgColors].filter(c => c > 0));
-          if (usedColorIndices.size === 0) {
-            setError("Cannot deploy: no colors used on canvas.");
-            setIsCreating(false);
-            return;
-          }
-
-          // No inherited colors in page.tsx
           const inheritedCount = 0;
           const inheritedColors: number[] = [];
           const usedNewColors: number[] = [];
           const newColorMap: { [oldIdx: number]: number } = {};
-
-          // Remap colors
           for (let i = 0; i < colors.length; i += 3) {
             const oldColorIdx = inheritedCount + Math.floor(i / 3) + 1;
             if (usedColorIndices.has(oldColorIdx)) {
@@ -981,12 +998,9 @@ setEditionAddress(newEdition);
             }
           }
 
-          // Ensure colors are valid for rendering
           const finalPalette = [...inheritedColors, ...usedNewColors];
-          const remappedBgColors = bgColors.map(c => c > 0 && newColorMap[c] ? newColorMap[c] : c);
-          const remappedFgColors = fgColors.map(c => c > 0 && newColorMap[c] ? newColorMap[c] : c);
-
-          // Validate color indices
+          const remappedBgColors = bgColors.map((c) => (c > 0 && newColorMap[c] ? newColorMap[c] : c));
+          const remappedFgColors = fgColors.map((c) => (c > 0 && newColorMap[c] ? newColorMap[c] : c));
           const maxColorIdx = Math.floor(finalPalette.length / 3);
           for (let i = 0; i < 81; i++) {
             if (remappedBgColors[i] > maxColorIdx) {
@@ -997,12 +1011,13 @@ setEditionAddress(newEdition);
             }
           }
 
-          console.log("setBaseArt DEBUG", {
+          console.log('setBaseArt DEBUG', {
             bgGlyphs,
             fgGlyphs,
             bgColors,
             fgColors,
             usedColorIndices: Array.from(usedColorIndices),
+            usedGlyphs: Array.from(usedGlyphs),
             newColorMap,
             usedNewColors,
             remappedBgColors,
@@ -1010,12 +1025,13 @@ setEditionAddress(newEdition);
             maxBgColor: Math.max(...remappedBgColors),
             maxFgColor: Math.max(...remappedFgColors),
             finalPalette,
+            gasLimit: '6000000',
           });
 
           const config = {
             address: newEdition as `0x${string}`,
             abi: editionAbi.abi,
-            functionName: "setBaseArt",
+            functionName: 'setBaseArt',
             args: [
               bgGlyphs,
               fgGlyphs,
@@ -1029,17 +1045,19 @@ setEditionAddress(newEdition);
               0,
               GLYPH_SET_ADDRESS,
             ],
-            gas: BigInt(4500000), // Fixed gas limit to cover complex inputs
+            gas: BigInt(6000000), // Increased gas limit
           };
           const artTx = await writeContractAsync(config);
-          console.log("Set base art transaction:", artTx);
+          console.log('Set base art transaction:', artTx);
           setArtTxHash(artTx);
-} catch (error) {
-  console.error("Set base art failed:", error);
-  const errorMessage = error instanceof Error ? error.message : String(error);
-  setError("Failed to set base art: " + (errorMessage || "Unknown error"));
-  setIsCreating(false);
-}
+          setIsArtProcessing(false);
+        } catch (error) {
+          console.error('Set base art failed:', error);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          setError(`Failed to finalize artwork: ${errorMessage || 'Unknown error'}`);
+          setIsCreating(false);
+          setIsArtProcessing(false);
+        }
       };
 
       setBaseArt();
@@ -1048,24 +1066,28 @@ setEditionAddress(newEdition);
 
   useEffect(() => {
     if (artReceipt && editionAddress) {
+      setIsCreating(false);
+      setIsArtProcessing(false);
       setPage(3);
     }
   }, [artReceipt, editionAddress, setPage]);
 
   const canMint = () => {
     const usedColorIndices = new Set<number>(
-      backgroundColors.concat(glyphColors).filter(c => c !== null).map(c => c!)
+      backgroundColors.concat(glyphColors).filter((c) => c !== null).map((c) => c!)
     );
     return (
-      backgroundGlyphs.some(g => g !== null) &&
+      Array.isArray(backgroundGlyphs) &&
+      backgroundGlyphs.some((g) => g !== null) &&
+      Array.isArray(colors) &&
       colors.length > 0 &&
-      name.trim() !== "" &&
-      symbol.trim() !== "" &&
-      description.trim() !== "" &&
+      name.trim() !== '' &&
+      symbol.trim() !== '' &&
+      description.trim() !== '' &&
       editionSize >= 1 &&
-      !backgroundColors.some(c => c !== null && c > colors.length / 3) &&
-      !glyphColors.some(c => c !== null && c > colors.length / 3) &&
-      (usedColorIndices.size === 0 || Array.from(usedColorIndices).every(c => c <= colors.length / 3))
+      !backgroundColors.some((c) => c !== null && c > colors.length / 3) &&
+      !glyphColors.some((c) => c !== null && c > colors.length / 3) &&
+      (usedColorIndices.size === 0 || Array.from(usedColorIndices).every((c) => c <= colors.length / 3))
     );
   };
 
@@ -1075,7 +1097,7 @@ setEditionAddress(newEdition);
         <label className="block text-sm font-bold mb-1">Name</label>
         <input
           value={name}
-          onChange={e => setName(e.target.value)}
+          onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Pixel Art #1234"
           className="w-full border border-gray-300 p-2 placeholder-gray-400 resize-none text-base"
           style={{ fontSize: '14px', touchAction: 'manipulation' }}
@@ -1085,7 +1107,7 @@ setEditionAddress(newEdition);
         <label className="block text-sm font-bold mb-1">Token Symbol</label>
         <input
           value={symbol}
-          onChange={e => setSymbol(e.target.value)}
+          onChange={(e) => setSymbol(e.target.value)}
           placeholder="e.g. PXL1234"
           className="w-full border border-gray-300 p-2 placeholder-gray-400 resize-none text-base"
           style={{ fontSize: '14px', touchAction: 'manipulation' }}
@@ -1095,7 +1117,7 @@ setEditionAddress(newEdition);
         <label className="block text-sm font-bold mb-1">Description</label>
         <textarea
           value={description}
-          onChange={e => setDescription(e.target.value)}
+          onChange={(e) => setDescription(e.target.value)}
           placeholder="Describe your artwork"
           className="w-full border border-gray-300 p-2 h-20 placeholder-gray-400 resize-none text-base"
           style={{ fontSize: '14px', touchAction: 'manipulation' }}
@@ -1108,21 +1130,51 @@ setEditionAddress(newEdition);
           min="1"
           max="5"
           value={editionSize}
-          onChange={e => setEditionSize(parseInt(e.target.value))}
+          onChange={(e) => setEditionSize(parseInt(e.target.value))}
           className="w-full"
         />
         <p className="text-sm text-center">{editionSize}</p>
       </div>
-      <p className="text-sm text-gray-500">Free mint (0.0004 ETH platform fee)</p>
+      <p className="text-base font-bold text-gray-700">
+        Creation: 0.0004 ETH (contract) | Collect: 0.0004 ETH
+      </p>
       <button
         onClick={createEdition}
-        disabled={isCreating || !canMint()}
+        disabled={isCreating || isArtProcessing || !canMint()}
         className="w-full bg-green-500 hover:bg-green-600 text-white py-3 text-base rounded-none disabled:bg-gray-400 transition-colors"
       >
-        {isCreating ? "Deploying..." : "Deploy"}
+        {isCreating || isArtProcessing ? (
+          <span className="flex items-center justify-center">
+            <svg
+              className="animate-spin h-5 w-5 mr-2 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            {isCreating ? 'Creating Edition...' : 'Finalizing Artwork...'}
+          </span>
+        ) : (
+          'Deploy'
+        )}
       </button>
       {error && <p className="text-red-500 text-sm">{error}</p>}
-      {editionAddress && <p className="text-sm">Edition at: {editionAddress}</p>}
+      {editionAddress && !artReceipt && (
+        <p className="text-sm text-gray-700">Edition created at: {editionAddress}</p>
+      )}
     </div>
   );
 }
