@@ -549,7 +549,7 @@ function Editor({
     console.log("Glyph refs:", glyphCanvasRefs.current.map(c => c ? 'set' : 'unset'));
   }, [glyphBatchIndex, selectedColorIdx1, selectedColorIdx2, colors]);
 
-  const getCanvasPosition = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+const getCanvasPosition = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
@@ -631,8 +631,10 @@ function Editor({
     }
   };
 
-  const stopDrawing = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    e.preventDefault(); // Prevent scrolling on touch
+  const stopDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if ("touches" in e) {
+      e.preventDefault(); // Prevent scrolling only for touch events
+    }
     isDrawing.current = false;
   };
 
