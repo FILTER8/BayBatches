@@ -136,16 +136,22 @@ export async function POST(request: Request) {
     }
 
     const response = await client.fetchBulkUsers({ fids });
-    const profiles = response.users.reduce((acc: Record<string, UserProfile>, user: NeynarUser) => {
-      const address = user.verifications?.[0]?.toLowerCase() || lowerAddresses.find(addr => fidMap[addr] === user.fid);
-      if (address) {
-        const pfpUrl = user.pfp_url && (await isValidImageUrl(user.pfp_url))
+    // Pre-process pfp_url validation
+    const pfpUrls = await Promise.all(
+      response.users.map(async (user) => {
+        return user.pfp_url && (await isValidImageUrl(user.pfp_url))
           ? user.pfp_url
           : 'https://bay-batches.vercel.app/splashicon.png';
+      })
+    );
+
+    const profiles = response.users.reduce((acc: Record<string, UserProfile>, user: NeynarUser, index: number) => {
+      const address = user.verifications?.[0]?.toLowerCase() || lowerAddresses.find(addr => fidMap[addr] === user.fid);
+      if (address) {
         acc[address] = {
           username: user.username || address.slice(0, 6),
           display_name: user.display_name || user.username || address.slice(0, 6),
-          pfp_url: pfpUrl,
+          pfp_url: pfpUrls[index],
           address,
         };
       }
