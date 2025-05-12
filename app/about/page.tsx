@@ -17,8 +17,6 @@ const DEFAULT_COLORS = [
   [0, 82, 255],    // #base blue
 ].flat();
 
-const SOLID_BLOCK_BITMAP = BigInt('0xFFFFFFFFFFFFFFFF');
-
 export default function About() {
   // Glyph separator: 9 glyphs with background (solid block) and foreground glyph
   const GlyphSeparator = ({ glyphId, fgColorIndices, bgColorIndices }: {
@@ -51,7 +49,7 @@ export default function About() {
           }
         }
       });
-    }, [glyphId, fgColorIndices, bgColorIndices]);
+    }, [glyphId, fgColorIndices, bgColorIndices, bitmap]);
 
     return (
       <div className="flex justify-center my-4">
