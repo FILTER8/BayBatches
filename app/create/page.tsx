@@ -131,8 +131,6 @@ export default function Create() {
     setForegroundGlyphs(newForegroundGlyphs);
     setBackgroundColors(newBackgroundColors);
     setGlyphColors(newGlyphColors);
-
-    const randomNum = getRandomInt(1000, 9999);
     setGlyphBatchIndex(0);
     setEditionSize(1);
     setName("BaseBatches");
