@@ -619,18 +619,20 @@ function Editor({
   };
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault(); // Prevent scrolling on touch
     isDrawing.current = true;
     draw(e);
   };
 
   const keepDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (isDrawing.current) {
-      e.preventDefault();
+      e.preventDefault(); // Prevent scrolling on touch
       draw(e);
     }
   };
 
-  const stopDrawing = () => {
+  const stopDrawing = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault(); // Prevent scrolling on touch
     isDrawing.current = false;
   };
 
@@ -647,6 +649,7 @@ function Editor({
   };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault(); // Prevent scrolling on touch
     if (e.touches.length === 2) {
       handleDoubleTap();
       return;
@@ -669,7 +672,7 @@ function Editor({
         onTouchEnd={stopDrawing}
         onDoubleClick={handleDoubleTap}
         className="border border-gray-100 mb-1 pixelated w-full"
-        style={{ aspectRatio: "1 / 1" }}
+        style={{ aspectRatio: "1 / 1", touchAction: "none" }}
       />
       <div className="flex flex-wrap justify-center gap-1 w-full">
         {colors.length === 0 ? (
