@@ -1,4 +1,4 @@
-import { TokenDetail } from '@/components/TokenDetail';
+import { TokenDetail } from '../../../components/TokenDetail';
 import { ethers } from 'ethers';
 
 export default async function TokenPage({ params }: { params: { editionId: string; tokenId: string } }) {
