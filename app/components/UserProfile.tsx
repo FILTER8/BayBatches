@@ -5,8 +5,6 @@ import { useQuery } from '@apollo/client';
 import { USER_PROFILE_QUERY } from '../graphql/queries';
 import MemoizedNFTImage from './NFTImage';
 import { TokenDetail } from './TokenDetail';
-import { Avatar, Name } from '@coinbase/onchainkit/identity';
-import { base } from 'wagmi/chains';
 import { getGlyphContractFromEdition } from '../lib/contractUtils';
 
 const GLYPH_SET_ADDRESS = '0x8A7075295bb7f8aB5dC5BdA75E0B726bB289af40';
@@ -136,40 +134,16 @@ export function UserProfile({ walletAddress }: UserProfileProps) {
         </button>
       </div>
       <div className="flex items-center gap-2 mt-2">
-        <Avatar
-          address={walletAddress as `0x${string}`}
-          chain={base}
-          className="w-8 h-8 rounded-full"
-          onError={(error) => console.error(`Avatar error for ${walletAddress}:`, error)}
-        />
         {selectedEdition ? (
           <h1
             className="text-sm font-bold cursor-pointer text-blue-500 hover:underline"
             onClick={() => setSelectedEdition(null)}
           >
-            <Name
-              address={walletAddress as `0x${string}`}
-              chain={base}
-              className="inline"
-              onError={(error) => console.error(`Name error for ${walletAddress}:`, error)}
-            >
-              {({ name }) => (
-                <span>{name || truncateAddress(walletAddress)}</span>
-              )}
-            </Name>
+            <span>{truncateAddress(walletAddress)}</span>
           </h1>
         ) : (
           <h1 className="text-sm font-bold">
-            <Name
-              address={walletAddress as `0x${string}`}
-              chain={base}
-              className="inline"
-              onError={(error) => console.error(`Name error for ${walletAddress}:`, error)}
-            >
-              {({ name }) => (
-                <span>{name || truncateAddress(walletAddress)}</span>
-              )}
-            </Name>
+            <span>{truncateAddress(walletAddress)}</span>
           </h1>
         )}
       </div>
@@ -204,7 +178,6 @@ export function UserProfile({ walletAddress }: UserProfileProps) {
                       <MemoizedNFTImage
                         address={token.edition.id}
                         tokenId={Number(token.tokenId)}
-                        alchemyUrl={process.env.NEXT_PUBLIC_ALCHEMY_URL}
                       />
                     </div>
                   ))}
@@ -241,7 +214,6 @@ export function UserProfile({ walletAddress }: UserProfileProps) {
                     <MemoizedNFTImage
                       address={edition.id}
                       tokenId={1}
-                      alchemyUrl={process.env.NEXT_PUBLIC_ALCHEMY_URL}
                     />
                   </div>
                 ))}
