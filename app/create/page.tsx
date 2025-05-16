@@ -820,7 +820,7 @@ interface DeploymentScreenProps {
   setPage: (page: number) => void;
 }
 
-function DeploymentScreen({
+export function DeploymentScreen({
   name,
   setName,
   symbol,
@@ -849,16 +849,17 @@ function DeploymentScreen({
 }: DeploymentScreenProps) {
   const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient();
-const { data: receipt } = useWaitForTransactionReceipt({
-  hash: txHash as `0x${string}`,
-  chainId: base.id, // Changed from baseSepolia.id to base.id
-});
-const { data: artReceipt } = useWaitForTransactionReceipt({
-  hash: artTxHash as `0x${string}`,
-  chainId: base.id, // Changed from baseSepolia.id to base.id
-});
+  const { data: receipt } = useWaitForTransactionReceipt({
+    hash: txHash as `0x${string}`,
+    chainId: base.id,
+  });
+  const { data: artReceipt } = useWaitForTransactionReceipt({
+    hash: artTxHash as `0x${string}`,
+    chainId: base.id,
+  });
   const [lastSetBaseArtTime, setLastSetBaseArtTime] = useState<number>(0); // For rate-limiting
   const [isArtProcessing, setIsArtProcessing] = useState(false); // For setBaseArt
+  const [showUploadingPopup, setShowUploadingPopup] = useState(false); // For uploading popup
 
   const createEdition = async () => {
     if (isCreating || !canMint() || !publicClient) return;
@@ -970,7 +971,6 @@ const { data: artReceipt } = useWaitForTransactionReceipt({
             throw new Error('Artwork must include at least one color and one glyph');
           }
 
-          // Original setBaseArt logic (unchanged)
           setIsArtProcessing(true);
           const validGlyphIds = new Set(GLYPHS.map((g) => g.id));
           for (let i = 0; i < 81; i++) {
@@ -1064,34 +1064,35 @@ const { data: artReceipt } = useWaitForTransactionReceipt({
     }
   }, [receipt, txHash, writeContractAsync, publicClient, backgroundGlyphs, foregroundGlyphs, backgroundColors, glyphColors, colors, address, setEditionAddress, setArtTxHash, setError, setIsCreating]);
 
-useEffect(() => {
-  if (artReceipt && editionAddress) {
-    setIsCreating(false);
-    setIsArtProcessing(false);
-    // Trigger PNG generation
-    setTimeout(async () => {
-      try {
-        const response = await fetch('/api/trigger-png', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ editionAddress }),
-        });
-        if (!response.ok) {
-          console.error(`Failed to trigger PNG generation for ${editionAddress}: ${response.status}`);
-          setError(`Failed to trigger image generation: ${response.status}`);
-        } else {
-          console.log(`Triggered PNG generation for ${editionAddress}`);
+  useEffect(() => {
+    if (artReceipt && editionAddress) {
+      setIsCreating(false);
+      setIsArtProcessing(false);
+      setShowUploadingPopup(true); // Show uploading popup
+      setTimeout(async () => {
+        try {
+          const response = await fetch('/api/trigger-png', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ editionAddress }),
+          });
+          if (!response.ok) {
+            console.error(`Failed to trigger PNG generation for ${editionAddress}: ${response.status}`);
+            setError(`Failed to trigger image generation: ${response.status}`);
+          } else {
+            console.log(`Triggered PNG generation for ${editionAddress}`);
+          }
+        } catch (err) {
+          console.error(`Error triggering PNG for ${editionAddress}:`, err);
+          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+          setError(`Error triggering image generation: ${errorMessage}`);
+        } finally {
+          setShowUploadingPopup(false); // Hide uploading popup
+          setPage(3); // Move to final page
         }
-  } catch (err) {
-    console.error(`Error triggering PNG for ${editionAddress}:`, err);
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-    setError(`Error triggering image generation: ${errorMessage}`);
-  } finally {
-    setPage(3);
-  }
-}, 5000);
-  }
-}, [artReceipt, editionAddress, setPage, setError]);
+      }, 5000);
+    }
+  }, [artReceipt, editionAddress, setPage, setError]);
 
   const canMint = () => {
     const usedColorIndices = new Set<number>(
@@ -1113,7 +1114,7 @@ useEffect(() => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 relative">
       <div>
         <label className="block text-sm font-bold mb-1">Name</label>
         <input
@@ -1157,14 +1158,16 @@ useEffect(() => {
         <p className="text-sm text-center">{editionSize}</p>
       </div>
       <p className="text-sm text-gray-700">
-        Creation: 0.0004 ETH (contract) | Collect: 0.0004 ETH
+        Creation requires two transactions:<br />
+        1. Deploy contract (0.0004 ETH)<br />
+        2. Finalize artwork (gas fees only)
       </p>
       <button
         onClick={createEdition}
         disabled={isCreating || isArtProcessing || !canMint()}
         className="w-full bg-green-500 hover:bg-green-600 text-white py-3 text-base rounded-none disabled:bg-gray-400 transition-colors"
       >
-        {isCreating || isArtProcessing ? (
+        {isCreating ? (
           <span className="flex items-center justify-center">
             <svg
               className="animate-spin h-5 w-5 mr-2 text-white"
@@ -1186,15 +1189,51 @@ useEffect(() => {
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
               ></path>
             </svg>
-            {isCreating ? 'Creating Edition...' : 'Finalizing Artwork...'}
+            Creating Contract...
+          </span>
+        ) : isArtProcessing ? (
+          <span className="flex items-center justify-center">
+            <svg
+              className="animate-spin h-5 w-5 mr-2 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            Finalizing Artwork...
           </span>
         ) : (
-          'Deploy (0.0004)'
+          'Deploy (0.0004 ETH)'
         )}
       </button>
       {error && <p className="text-red-500 text-sm">{error}</p>}
       {editionAddress && !artReceipt && (
-        <p className="text-sm text-gray-700">Edition created at: {editionAddress}</p>
+        <p className="text-sm text-gray-700">
+          Contract created at: {editionAddress}<br />
+          Please approve the second transaction to finalize your artwork.
+        </p>
+      )}
+      {showUploadingPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg flex flex-col items-center">
+            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-gray-600 mb-4"></div>
+            <p className="text-lg font-semibold">Uploading Artwork...</p>
+            <p className="text-sm text-gray-600">This may take a few moments.</p>
+          </div>
+        </div>
       )}
     </div>
   );
