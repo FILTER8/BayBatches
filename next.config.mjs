@@ -7,6 +7,16 @@ const nextConfig = {
     return config;
   },
   transpilePackages: ["geist"],
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'pub-bd7c5d8a825145c691a3ad40196fd45c.r2.dev',
+        port: '',
+        pathname: '/**',
+      },
+    ],
+  },
 };
 
 export default nextConfig;

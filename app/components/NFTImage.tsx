@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect, useState, memo } from 'react';
+import { memo, useEffect, useState } from 'react';
 import localforage from 'localforage';
 import Image from 'next/image';
 
@@ -9,12 +9,13 @@ interface NFTImageProps {
   tokenId: number;
   imageSrc?: string;
   onImageLoad?: () => void;
-  isReady?: boolean; // Kept for compatibility with page.tsx
+  isReady?: boolean;
+  alchemyUrl?: string; // Added to fix TypeScript error
 }
 
 localforage.config({ name: 'NFTImageCache' });
 
-function NFTImage({ address, tokenId, imageSrc, onImageLoad, isReady = true }: NFTImageProps) {
+function NFTImage({ address, tokenId, imageSrc, onImageLoad, isReady = true, alchemyUrl }: NFTImageProps) {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>(imageSrc ? 'success' : 'loading');
   const [fetchedImageSrc, setFetchedImageSrc] = useState<string | null>(imageSrc || null);
   const [pngFailed, setPngFailed] = useState(false);
@@ -72,30 +73,19 @@ function NFTImage({ address, tokenId, imageSrc, onImageLoad, isReady = true }: N
   if (status === 'error') {
     return (
       <div className="relative w-full aspect-square bg-gray-100">
-        <img
+        <Image
           src="/default-nft.png"
           alt="Default NFT"
-          className="object-contain object-center w-full h-full"
-          loading="lazy"
+          fill
+          className="object-contain object-center"
+          sizes="100vw"
+          quality={75}
         />
       </div>
     );
   }
 
   if (fetchedImageSrc) {
-    if (fetchedImageSrc.startsWith('https://pub-bd7c5d8a825145c691a3ad40196fd45c.r2.dev')) {
-      return (
-        <div className="relative w-full aspect-square">
-          <img
-            src={fetchedImageSrc}
-            alt={`NFT ${tokenId}`}
-            className="object-contain object-center pixelated w-full h-full"
-            loading="lazy"
-            onLoad={onImageLoad}
-          />
-        </div>
-      );
-    }
     return (
       <div className="relative w-full aspect-square">
         <Image
@@ -125,5 +115,6 @@ export default memo(NFTImage, (prevProps, nextProps) =>
   prevProps.tokenId === nextProps.tokenId &&
   prevProps.imageSrc === nextProps.imageSrc &&
   prevProps.onImageLoad === nextProps.onImageLoad &&
-  prevProps.isReady === nextProps.isReady
+  prevProps.isReady === nextProps.isReady &&
+  prevProps.alchemyUrl === nextProps.alchemyUrl
 );
