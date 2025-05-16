@@ -12,7 +12,7 @@ export default async function TokenPage({ params }: { params: { editionId: strin
     const provider = new ethers.JsonRpcProvider(
       `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
     );
-    const contract = new ethers.Contract(params.editionId, require('../../../contracts/MintbayEdition.json').abi, provider);
+   const contract = new ethers.Contract(params.editionId, mintbayEditionAbi.abi, provider);
 
     // Fetch contract data
     const [name, nextTokenId, editionSize, price, isFreeMint, paused] = await Promise.all([
