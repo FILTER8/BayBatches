@@ -10,12 +10,11 @@ interface NFTImageProps {
   imageSrc?: string;
   onImageLoad?: () => void;
   isReady?: boolean;
-  alchemyUrl?: string; // Added to fix TypeScript error
 }
 
 localforage.config({ name: 'NFTImageCache' });
 
-function NFTImage({ address, tokenId, imageSrc, onImageLoad, isReady = true, alchemyUrl }: NFTImageProps) {
+function NFTImage({ address, tokenId, imageSrc, onImageLoad, isReady = true }: NFTImageProps) {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>(imageSrc ? 'success' : 'loading');
   const [fetchedImageSrc, setFetchedImageSrc] = useState<string | null>(imageSrc || null);
   const [pngFailed, setPngFailed] = useState(false);
@@ -115,6 +114,5 @@ export default memo(NFTImage, (prevProps, nextProps) =>
   prevProps.tokenId === nextProps.tokenId &&
   prevProps.imageSrc === nextProps.imageSrc &&
   prevProps.onImageLoad === nextProps.onImageLoad &&
-  prevProps.isReady === nextProps.isReady &&
-  prevProps.alchemyUrl === nextProps.alchemyUrl
+  prevProps.isReady === nextProps.isReady
 );

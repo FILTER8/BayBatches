@@ -59,7 +59,7 @@ export function TokenDetail({ edition, tokenId = 1 }: TokenDetailProps) {
     <div className="flex flex-col items-center">
       <h2 className="text-xl font-bold mb-2 mt-0">{edition.name}</h2>
       <div className="w-full max-w-md mb-4 relative">
-        <MemoizedNFTImage address={edition.id} tokenId={tokenId} alchemyUrl={ALCHEMY_URL} />
+        <MemoizedNFTImage address={edition.id} tokenId={tokenId} />
         {showCollectedOverlay && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-[#ffffff] text-lg font-medium">
             collected
