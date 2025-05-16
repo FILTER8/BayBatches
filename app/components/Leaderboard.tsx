@@ -1,9 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, ReactNode } from 'react';
-import { Avatar, Name } from '@coinbase/onchainkit/identity';
-import { base } from 'wagmi/chains';
+import { useState } from 'react';
 
 interface LeaderboardEntry {
   walletAddress: string;
@@ -66,24 +64,9 @@ export function Leaderboard({ mostCollected, mostCreated }: LeaderboardProps) {
             >
               <span className="text-sm font-medium w-6">{index + 1}.</span>
               <div className="flex items-center gap-2">
-                <Avatar
-                  address={entry.walletAddress as `0x${string}`}
-                  chain={base}
-                  className="w-8 h-8 rounded-full"
-                  onError={(error) => console.error(`Avatar error for ${entry.walletAddress}:`, error)}
-                />
-                <Name
-                  address={entry.walletAddress as `0x${string}`}
-                  chain={base}
-                  className="text-sm font-medium truncate"
-                  onError={(error) => console.error(`Name error for ${entry.walletAddress}:`, error)}
-                >
-                  {({ name }: { name: string | null }): ReactNode => (
-                    <span className="text-sm font-medium truncate">
-                      {name || truncateAddress(entry.walletAddress)}
-                    </span>
-                  )}
-                </Name>
+                <span className="text-sm font-medium truncate">
+                  {truncateAddress(entry.walletAddress)}
+                </span>
               </div>
               <span className="text-sm ml-auto">
                 {tab === 'collected'
