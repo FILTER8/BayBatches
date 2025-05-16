@@ -6,12 +6,12 @@ export const LEADERBOARD_QUERY = gql`
       id
       tokensOwned(first: 1000) {
         id
-        edition { id glyphContract }
+        edition { id glyphContract { id } }
         tokenId
       }
       editionsCreated(first: 1000) {
         id
-        glyphContract
+        glyphContract { id }
       }
     }
   }
@@ -25,7 +25,7 @@ export const USER_PROFILE_QUERY = gql`
         id
         edition {
           id
-          glyphContract
+          glyphContract { id }
           name
           totalSupply
           editionSize
@@ -37,7 +37,7 @@ export const USER_PROFILE_QUERY = gql`
       }
       editionsCreated(first: 1000) {
         id
-        glyphContract
+        glyphContract { id }
         name
         totalSupply
         editionSize
@@ -52,7 +52,7 @@ export const USER_PROFILE_QUERY = gql`
 export const ALL_EDITIONS_QUERY = gql`
   query AllEditions {
     editions(
-      first: 30
+      first: 100
       skip: 0
       orderBy: createdAt
       orderDirection: desc
@@ -68,7 +68,7 @@ export const ALL_EDITIONS_QUERY = gql`
       price
       isFreeMint
       paused
-      glyphContract
+      glyphContract { id }
     }
   }
 `;

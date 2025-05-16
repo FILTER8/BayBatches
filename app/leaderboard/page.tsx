@@ -7,20 +7,19 @@ import Header from '../components/Header';
 import { TitleBar, PageFooter } from '../components/PageContent';
 import { Leaderboard } from '../components/Leaderboard';
 import { LEADERBOARD_QUERY } from '../graphql/queries';
-import { getUserProfiles } from '../lib/neynar';
 import { getGlyphContractFromEdition } from '../lib/contractUtils';
 
-const GLYPH_SET_ADDRESS = '0x7fe14be3b6b50bc523fac500dc3f827cd99c2b84';
+const GLYPH_SET_ADDRESS = '0x8A7075295bb7f8aB5dC5BdA75E0B726bB289af40';
 
 interface Token {
   id: string;
   tokenId: string;
-  edition: { id: string; glyphContract: string };
+  edition: { id: string; glyphContract: { id: string } };
 }
 
 interface Edition {
   id: string;
-  glyphContract: string;
+  glyphContract: { id: string };
 }
 
 interface User {
@@ -29,15 +28,8 @@ interface User {
   editionsCreated: Edition[];
 }
 
-interface Profile {
-  username: string;
-  avatarUrl: string;
-}
-
 interface LeaderboardEntry {
   walletAddress: string;
-  username: string;
-  avatarUrl: string;
   tokensOwnedCount: number;
   editionsCreatedCount: number;
 }
@@ -46,8 +38,6 @@ export default function LeaderboardPage() {
   const { data, loading, error: queryError } = useQuery<{ users: User[] }>(LEADERBOARD_QUERY, {
     fetchPolicy: 'cache-and-network',
   });
-  const [profiles, setProfiles] = useState<Record<string, Profile>>({});
-  const [profileError, setProfileError] = useState<string | null>(null);
   const [filteredUsers, setFilteredUsers] = useState<
     Array<{
       id: string;
@@ -55,48 +45,10 @@ export default function LeaderboardPage() {
       editionsCreatedCount: number;
     }>
   >([]);
-  const [addresses, setAddresses] = useState<string[]>([]);
 
   useEffect(() => {
     if (data) {
       console.log('Subgraph data:', JSON.stringify(data, null, 2));
-      const userAddresses = data.users
-        .filter(
-          (user) => (user.tokensOwned?.length || 0) > 0 || (user.editionsCreated?.length || 0) > 0
-        )
-        .map((user) => user.id);
-      console.log('Filtered addresses for profiles:', userAddresses);
-      setAddresses(userAddresses);
-
-      if (userAddresses.length > 0) {
-        const batchSize = 50;
-        const batches = [];
-        for (let i = 0; i < userAddresses.length; i += batchSize) {
-          batches.push(userAddresses.slice(i, i + batchSize));
-        }
-        const profilePromises = batches.map(batch =>
-          getUserProfiles(batch).catch(err => {
-            console.error('Failed to fetch batch:', err);
-            return {} as Record<string, Profile>;
-          })
-        );
-        Promise.all(profilePromises)
-          .then((profileResults) => {
-            const fetchedProfiles = profileResults.reduce((acc, profiles) => ({ ...acc, ...profiles }), {} as Record<string, Profile>);
-            console.log('Fetched profiles:', JSON.stringify(fetchedProfiles, null, 2));
-            const missing = userAddresses.filter(addr => !fetchedProfiles[addr]);
-            if (missing.length > 0) {
-              console.warn('Addresses missing profiles:', missing);
-            }
-            setProfiles(fetchedProfiles);
-          })
-          .catch((err) => {
-            console.error('Failed to fetch profiles:', err);
-            setProfileError('Failed to load user profiles');
-          });
-      } else {
-        console.log('No users with tokens or editions found');
-      }
 
       const filterData = async () => {
         const filtered = await Promise.all(
@@ -105,7 +57,7 @@ export default function LeaderboardPage() {
             if (user.tokensOwned?.length > 0) {
               const tokenResults = await Promise.allSettled(
                 user.tokensOwned.map(async (token) => {
-                  const glyphAddress = await getGlyphContractFromEdition(token.edition.id);
+                  const glyphAddress = token.edition.glyphContract?.id?.toLowerCase() || (await getGlyphContractFromEdition(token.edition.id));
                   return { token, glyphAddress };
                 })
               );
@@ -114,7 +66,7 @@ export default function LeaderboardPage() {
                   (result): result is PromiseFulfilledResult<{ token: Token; glyphAddress: string }> =>
                     result.status === 'fulfilled' &&
                     result.value.glyphAddress === GLYPH_SET_ADDRESS.toLowerCase() &&
-                    Number(result.value.token.tokenId) !== 1
+                    Number(result.value.token.tokenId) !== 1 // Exclude tokenId: 1
                 )
                 .map((result) => result.value.token);
             }
@@ -123,7 +75,7 @@ export default function LeaderboardPage() {
             if (user.editionsCreated?.length > 0) {
               const editionResults = await Promise.allSettled(
                 user.editionsCreated.map(async (edition) => {
-                  const glyphAddress = await getGlyphContractFromEdition(edition.id);
+                  const glyphAddress = edition.glyphContract?.id?.toLowerCase() || (await getGlyphContractFromEdition(edition.id));
                   return { edition, glyphAddress };
                 })
               );
@@ -155,8 +107,6 @@ export default function LeaderboardPage() {
       .filter((user) => user.tokensOwnedCount > 0)
       .map((user) => ({
         walletAddress: user.id,
-        username: profiles[user.id]?.username || user.id.slice(0, 6),
-        avatarUrl: profiles[user.id]?.avatarUrl || 'https://bay-batches.vercel.app/splashicon.png',
         tokensOwnedCount: user.tokensOwnedCount,
         editionsCreatedCount: user.editionsCreatedCount,
       }))
@@ -168,8 +118,6 @@ export default function LeaderboardPage() {
       .filter((user) => user.editionsCreatedCount > 0)
       .map((user) => ({
         walletAddress: user.id,
-        username: profiles[user.id]?.username || user.id.slice(0, 6),
-        avatarUrl: profiles[user.id]?.avatarUrl || 'https://bay-batches.vercel.app/splashicon.png',
         tokensOwnedCount: user.tokensOwnedCount,
         editionsCreatedCount: user.editionsCreatedCount,
       }))
@@ -198,21 +146,12 @@ export default function LeaderboardPage() {
             <div className="text-center">Loading...</div>
           ) : queryError ? (
             <div className="text-center text-red-500">Error: {queryError.message}</div>
-          ) : profileError ? (
-            <div className="text-center text-red-500">
-              {profileError}. Some profiles may display wallet addresses.
-            </div>
           ) : !data?.users?.length ? (
             <div className="text-center text-gray-500">No users found in the subgraph</div>
           ) : !mostCollected.length && !mostCreated.length ? (
             <div className="text-center text-gray-500">No users found with tokens or editions</div>
           ) : (
             <div className="mt-2">
-              {Object.keys(profiles).length < addresses.length && !profileError && (
-                <div className="text-center text-gray-500 mb-2">
-                  Some users may display wallet addresses due to missing Farcaster profiles.
-                </div>
-              )}
               <Leaderboard mostCollected={mostCollected} mostCreated={mostCreated} />
               <PageFooter pageName="LEADERBOARD" />
             </div>

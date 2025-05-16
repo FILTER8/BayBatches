@@ -5,10 +5,11 @@ import { useQuery } from '@apollo/client';
 import { USER_PROFILE_QUERY } from '../graphql/queries';
 import MemoizedNFTImage from './NFTImage';
 import { TokenDetail } from './TokenDetail';
-import Image from 'next/image';
+import { Avatar, Name } from '@coinbase/onchainkit/identity';
+import { base } from 'wagmi/chains';
 import { getGlyphContractFromEdition } from '../lib/contractUtils';
 
-const GLYPH_SET_ADDRESS = '0x7fe14be3b6b50bc523fac500dc3f827cd99c2b84';
+const GLYPH_SET_ADDRESS = '0x8A7075295bb7f8aB5dC5BdA75E0B726bB289af40';
 
 interface Token {
   id: string;
@@ -33,12 +34,9 @@ interface SelectedEdition extends Edition {
 
 interface UserProfileProps {
   walletAddress: string;
-  username: string;
-  avatarUrl: string;
-  basename: string | null;
 }
 
-export function UserProfile({ walletAddress, username, avatarUrl, basename }: UserProfileProps) {
+export function UserProfile({ walletAddress }: UserProfileProps) {
   const [tab, setTab] = useState<'collected' | 'created'>('collected');
   const [selectedEdition, setSelectedEdition] = useState<SelectedEdition | null>(null);
   const { data, loading, error } = useQuery<{ user: { tokensOwned: Token[]; editionsCreated: Edition[] } }>(
@@ -56,7 +54,6 @@ export function UserProfile({ walletAddress, username, avatarUrl, basename }: Us
       const filterData = async () => {
         const { tokensOwned, editionsCreated } = data.user;
 
-        // Filter tokensOwned, excluding tokenId #1
         let filteredTokensOwned: Token[] = [];
         if (tokensOwned?.length > 0) {
           const tokenResults = await Promise.allSettled(
@@ -75,7 +72,6 @@ export function UserProfile({ walletAddress, username, avatarUrl, basename }: Us
             .map((result) => result.value.token);
         }
 
-        // Filter editionsCreated
         let filteredEditionsCreated: Edition[] = [];
         if (editionsCreated?.length > 0) {
           const editionResults = await Promise.allSettled(
@@ -100,6 +96,11 @@ export function UserProfile({ walletAddress, username, avatarUrl, basename }: Us
       filterData();
     }
   }, [data]);
+
+  const truncateAddress = (address: string) => {
+    if (!address) return '';
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
 
   if (loading) return <div className="text-center">Loading...</div>;
   if (error) return <div className="text-center text-red-500">Error: {error.message}</div>;
@@ -135,23 +136,41 @@ export function UserProfile({ walletAddress, username, avatarUrl, basename }: Us
         </button>
       </div>
       <div className="flex items-center gap-2 mt-2">
-        <Image
-          src={avatarUrl || 'https://bay-batches.vercel.app/splashicon.png'}
-          alt={basename || username || walletAddress}
-          width={32}
-          height={32}
-          className="rounded-full"
-          unoptimized
+        <Avatar
+          address={walletAddress as `0x${string}`}
+          chain={base}
+          className="w-8 h-8 rounded-full"
+          onError={(error) => console.error(`Avatar error for ${walletAddress}:`, error)}
         />
         {selectedEdition ? (
           <h1
             className="text-sm font-bold cursor-pointer text-blue-500 hover:underline"
             onClick={() => setSelectedEdition(null)}
           >
-            {basename || username || walletAddress.slice(0, 6)}
+            <Name
+              address={walletAddress as `0x${string}`}
+              chain={base}
+              className="inline"
+              onError={(error) => console.error(`Name error for ${walletAddress}:`, error)}
+            >
+              {({ name }) => (
+                <span>{name || truncateAddress(walletAddress)}</span>
+              )}
+            </Name>
           </h1>
         ) : (
-          <h1 className="text-sm font-bold">{basename || username || walletAddress.slice(0, 6)}</h1>
+          <h1 className="text-sm font-bold">
+            <Name
+              address={walletAddress as `0x${string}`}
+              chain={base}
+              className="inline"
+              onError={(error) => console.error(`Name error for ${walletAddress}:`, error)}
+            >
+              {({ name }) => (
+                <span>{name || truncateAddress(walletAddress)}</span>
+              )}
+            </Name>
+          </h1>
         )}
       </div>
       <section className="mt-0">

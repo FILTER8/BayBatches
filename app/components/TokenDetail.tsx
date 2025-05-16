@@ -120,7 +120,7 @@ export function TokenDetail({ edition, tokenId = 1 }: TokenDetailProps) {
             <p className="text-xs mt-2 text-green-600">
               [Collected! Tx:{' '}
               <a
-                href={`https://sepolia.basescan.org/tx/${txHash}`}
+                href={`https://basescan.org/tx/${txHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline hover:text-green-800"

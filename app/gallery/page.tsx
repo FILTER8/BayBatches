@@ -17,6 +17,10 @@ interface Creator {
   id: string;
 }
 
+interface GlyphSet {
+  id: string;
+}
+
 interface Edition {
   id: string;
   name: string;
@@ -28,14 +32,14 @@ interface Edition {
   price: string;
   isFreeMint: boolean;
   paused: boolean;
-  glyphContract: string;
+  glyphContract?: GlyphSet; // Updated to object
 }
 
 interface GraphData {
   editions: Edition[];
 }
 
-const GLYPH_SET_ADDRESS = '0x7fe14be3b6b50bc523fac500dc3f827cd99c2b84';
+const GLYPH_SET_ADDRESS = '0x8A7075295bb7f8aB5dC5BdA75E0B726bB289af40';
 const ALCHEMY_URL = process.env.NEXT_PUBLIC_ALCHEMY_URL || '';
 
 const provider = ALCHEMY_URL ? new ethers.JsonRpcProvider(ALCHEMY_URL) : null;
@@ -76,14 +80,27 @@ export default function Gallery() {
   });
 
   useEffect(() => {
+    console.log('GraphQL Data:', graphData);
+    console.log('GraphQL Error:', graphError);
     startPolling(60000);
     return () => stopPolling();
-  }, [startPolling, stopPolling]);
+  }, [graphData, graphError, startPolling, stopPolling]);
 
   const stableGraphData = useMemo(() => {
     if (!graphData?.editions) return null;
     console.log('GraphQL query completed at:', new Date().toISOString());
-    return { editions: graphData.editions.map((e: Edition) => ({ ...e })) };
+    return {
+      editions: graphData.editions.map((e: Edition) => ({
+        ...e,
+        name: e.name || 'Unnamed Edition',
+        totalSupply: e.totalSupply || '0',
+        editionSize: e.editionSize || '0',
+        price: e.price || '0',
+        isFreeMint: e.isFreeMint ?? false,
+        paused: e.paused ?? false,
+        glyphContract: e.glyphContract, // Now an object
+      })),
+    };
   }, [graphData]);
 
   // Filter editions
@@ -112,11 +129,11 @@ export default function Gallery() {
           processedIds.add(editionId);
 
           // Use glyphContract from query, fallback to contract call
-          const glyphAddress = edition.glyphContract?.toLowerCase() || (await getGlyphContractFromEdition(edition.id));
+          const glyphAddress = edition.glyphContract?.id?.toLowerCase() || (await getGlyphContractFromEdition(edition.id));
           if (glyphAddress === GLYPH_SET_ADDRESS.toLowerCase()) {
             filtered.push({
               id: editionId,
-              name: edition.name || 'Unnamed Edition',
+              name: edition.name,
               creator: { id: edition.creator.id.toLowerCase() },
               createdAt: edition.createdAt,
               palette: edition.palette,
@@ -125,7 +142,7 @@ export default function Gallery() {
               price: edition.price,
               isFreeMint: edition.isFreeMint,
               paused: edition.paused,
-              glyphContract: glyphAddress,
+              glyphContract: edition.glyphContract,
             });
           }
         }
@@ -187,7 +204,7 @@ export default function Gallery() {
       <div className="w-full max-w-md mx-auto px-4 py-3 sticky top-0 z-10 bg-[#ffffff]">
         <Header />
         <div
-                  className="w-full h-11 flex items-center justify-between text-white text-sm tracking-[0.1em] mb-3 cursor-pointer bg-[#e096b6] px-4"
+          className="w-full h-11 flex items-center justify-between text-white text-sm tracking-[0.1em] mb-3 cursor-pointer bg-[#e096b6] px-4"
           onClick={() => setSelectedEditionIndex(null)}
         >
           {selectedEdition && (

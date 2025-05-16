@@ -1,173 +1,97 @@
 import { NextResponse } from 'next/server';
-import { NeynarAPIClient, Configuration, isApiErrorResponse } from '@neynar/nodejs-sdk';
+import { readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
 
-interface UserProfile {
-  username: string;
-  display_name: string;
-  pfp_url: string;
+// Interface for FID-address mappings
+interface FidAddressMapping {
+  fid: string;
   address: string;
-}
-
-interface NeynarUser {
-  fid: number;
   username: string;
-  display_name?: string;
-  pfp_url?: string;
-  pfp?: { url: string };
-  verifications?: string[];
-  custody_address?: string;
-  address?: string;
+  avatarUrl?: string;
 }
 
-if (!process.env.NEYNAR_API_KEY) {
-  throw new Error('NEYNAR_API_KEY is not defined in environment variables');
+// Path to mappings file
+const mappingsFile = join(process.cwd(), 'mappings.json');
+
+// Initialize mappings file if it doesn't exist
+try {
+  readFileSync(mappingsFile);
+} catch {
+  writeFileSync(mappingsFile, JSON.stringify({}));
 }
 
-const config = new Configuration({
-  apiKey: process.env.NEYNAR_API_KEY,
-  baseOptions: {
-    headers: {
-      'x-neynar-experimental': 'true',
-    },
-  },
-});
-
-const client = new NeynarAPIClient(config);
-
-// Helper to validate image URLs
-async function isValidImageUrl(url: string): Promise<boolean> {
+// Helper to read mappings
+function readMappings(): Record<string, FidAddressMapping> {
   try {
-    const response = await fetch(url, { method: 'HEAD' });
-    const contentType = response.headers.get('content-type');
-    return response.ok && contentType !== null && contentType.startsWith('image/');
-  } catch {
-    return false;
-  }
-}
-
-// Helper to resolve FIDs from addresses
-async function resolveFidsFromAddresses(addresses: string[]): Promise<Record<string, number>> {
-  try {
-    const response = await fetch('https://api.neynar.com/v2/user/bulk', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'api_key': process.env.NEYNAR_API_KEY!,
-        'x-neynar-experimental': 'true',
-      },
-      body: JSON.stringify({ addresses: addresses.map(addr => addr.toLowerCase()) }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Neynar API error: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.users.reduce((acc: Record<string, number>, user: NeynarUser) => {
-      if (user.fid && user.address) {
-        acc[user.address.toLowerCase()] = user.fid;
-      }
-      return acc;
-    }, {});
+    return JSON.parse(readFileSync(mappingsFile, 'utf-8'));
   } catch (error) {
-    console.error('Failed to resolve FIDs from addresses:', { error, addresses });
+    console.error('Failed to read mappings:', error);
     return {};
   }
 }
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const address = searchParams.get('address');
-
-  if (!address) {
-    return NextResponse.json({ error: 'Address is required' }, { status: 400 });
-  }
-
+// Helper to write mappings
+function writeMappings(mappings: Record<string, FidAddressMapping>) {
   try {
-    const fidMap = await resolveFidsFromAddresses([address.toLowerCase()]);
-    const fid = fidMap[address.toLowerCase()];
-    if (!fid) {
-      console.warn(`No FID found for address: ${address}`);
-      return NextResponse.json(null);
-    }
-
-    const response = await client.fetchBulkUsers({ fids: [fid] });
-    const user = response.users[0];
-    if (!user) {
-      console.warn(`No user found for FID: ${fid}`);
-      return NextResponse.json(null);
-    }
-
-    const pfpUrl = user.pfp_url && (await isValidImageUrl(user.pfp_url)) 
-      ? user.pfp_url 
-      : 'https://bay-batches.vercel.app/splashicon.png';
-
-    return NextResponse.json({
-      username: user.username || address.slice(0, 6),
-      display_name: user.display_name || user.username || address.slice(0, 6),
-      pfp_url: pfpUrl,
-      address: user.verifications?.[0] || address,
-    });
+    writeFileSync(mappingsFile, JSON.stringify(mappings, null, 2));
   } catch (error) {
-    const errorDetails = isApiErrorResponse(error) 
-      ? { message: error.response.data.message, status: error.response.status }
-      : { message: String(error) };
-    console.error(`Failed to fetch profile for ${address}:`, errorDetails);
-    return NextResponse.json({ error: 'Failed to fetch profile', details: errorDetails.message }, { status: 500 });
+    console.error('Failed to write mappings:', error);
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const { addresses } = await request.json();
-    if (!Array.isArray(addresses) || addresses.length === 0) {
-      return NextResponse.json({ error: 'Addresses array is required' }, { status: 400 });
+    const body = await request.json();
+    const { untrustedData } = body;
+    const { fid, address } = untrustedData || {};
+
+    if (!fid || !address) {
+      console.warn('Missing fid or address in Frame payload:', untrustedData);
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
     }
 
-    const lowerAddresses = addresses.map((addr: string) => addr.toLowerCase());
-    const fidMap = await resolveFidsFromAddresses(lowerAddresses);
-    const fids = lowerAddresses
-      .map(addr => fidMap[addr])
-      .filter((fid): fid is number => fid !== undefined);
-
-    if (fids.length === 0) {
-      console.warn(`No FIDs found for addresses: ${lowerAddresses.join(', ')}`);
-      return NextResponse.json({});
-    }
-
-    const response = await client.fetchBulkUsers({ fids });
-    // Pre-process pfp_url validation
-    const pfpUrls = await Promise.all(
-      response.users.map(async (user) => {
-        return user.pfp_url && (await isValidImageUrl(user.pfp_url))
-          ? user.pfp_url
-          : 'https://bay-batches.vercel.app/splashicon.png';
-      })
-    );
-
-    const profiles = response.users.reduce((acc: Record<string, UserProfile>, user: NeynarUser, index: number) => {
-      const address = user.verifications?.[0]?.toLowerCase() || lowerAddresses.find(addr => fidMap[addr] === user.fid);
-      if (address) {
-        acc[address] = {
-          username: user.username || address.slice(0, 6),
-          display_name: user.display_name || user.username || address.slice(0, 6),
-          pfp_url: pfpUrls[index],
-          address,
-        };
+    // Fetch profile from Wield
+    const response = await fetch(`https://build.wield.xyz/farcaster/v2/users?fids=${fid}`, {
+      headers: {
+        'API-KEY': process.env.WIELD_API_KEY!
       }
-      return acc;
-    }, {});
+    });
 
-    if (response.users.length === 0) {
-      console.warn(`No profiles found for FIDs: ${fids.join(', ')}`);
+    if (!response.ok) {
+      throw new Error(`Wield API error: ${response.statusText}`);
     }
 
-    return NextResponse.json(profiles);
+    const data = await response.json();
+    const user = data.result.users[0];
+    if (!user) {
+      console.warn(`No user found for FID: ${fid}`);
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Store mapping
+    const mappings = readMappings();
+    mappings[address.toLowerCase()] = {
+      fid: fid.toString(),
+      address: address.toLowerCase(),
+      username: fid === '211246' ? 'baydog' : user.username, // Override for your FID
+      avatarUrl: user.pfp.url
+    };
+    writeMappings(mappings);
+
+    // Return Frame metadata (maintains NFT gallery functionality)
+    return NextResponse.json({
+      version: 'vNext',
+      image: 'https://mintbay-miniframe.vercel.app/nft-gallery.png', // Update with your gallery image
+      buttons: [
+        {
+          label: 'Collect NFT',
+          action: 'post'
+        }
+      ],
+      postUrl: 'https://mintbay-miniframe.vercel.app/api/frame'
+    });
   } catch (error) {
-    const errorDetails = isApiErrorResponse(error) 
-      ? { message: error.response.data.message, status: error.response.status }
-      : { message: String(error) };
-    console.error('Failed to fetch bulk profiles:', errorDetails);
-    return NextResponse.json({ error: 'Failed to fetch profiles', details: errorDetails.message }, { status: 500 });
+    console.error('Failed to handle Frame POST:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWriteContract, useWaitForTransactionReceipt, useAccount, usePublicClient } from "wagmi";
-import { baseSepolia } from "wagmi/chains";
+import { base } from "wagmi/chains";
 import { ethers } from "ethers";
 import Header from "../components/Header";
 import factoryAbi from "../contracts/MintbayEditionFactory.json";
@@ -11,8 +11,8 @@ import glyphsData from "../data/glyphsFallbackNew.json";
 import { ArrowLeftCircle, ArrowRightCircle } from "@geist-ui/icons";
 import NFTImage from "../components/NFTImage";
 
-const FACTORY_ADDRESS = "0x75a8882d081ED5E8a16c487b703381Fcc409470e";
-const GLYPH_SET_ADDRESS = "0x7fE14bE3B6b50bc523faC500Dc3F827cd99c2b84";
+const FACTORY_ADDRESS = "0xd304E2932840185ed6634f593c103eA58367d848";
+const GLYPH_SET_ADDRESS = "0x8A7075295bb7f8aB5dC5BdA75E0B726bB289af40";
 const LAUNCHPAD_FEE = "400000000000000"; // 0.0004 ETH in wei
 const LAUNCHPAD_FEE_RECEIVER = "0x193c97e10aB0e2c0A12884f045145B44D8A551D4";
 const MARKETPLACE_FEE_RECEIVER = "0x193c97e10aB0e2c0A12884f045145B44D8A551D4";
@@ -849,14 +849,14 @@ function DeploymentScreen({
 }: DeploymentScreenProps) {
   const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient();
-  const { data: receipt } = useWaitForTransactionReceipt({
-    hash: txHash as `0x${string}`,
-    chainId: baseSepolia.id,
-  });
-  const { data: artReceipt } = useWaitForTransactionReceipt({
-    hash: artTxHash as `0x${string}`,
-    chainId: baseSepolia.id,
-  });
+const { data: receipt } = useWaitForTransactionReceipt({
+  hash: txHash as `0x${string}`,
+  chainId: base.id, // Changed from baseSepolia.id to base.id
+});
+const { data: artReceipt } = useWaitForTransactionReceipt({
+  hash: artTxHash as `0x${string}`,
+  chainId: base.id, // Changed from baseSepolia.id to base.id
+});
   const [lastSetBaseArtTime, setLastSetBaseArtTime] = useState<number>(0); // For rate-limiting
   const [isArtProcessing, setIsArtProcessing] = useState(false); // For setBaseArt
 
@@ -1064,13 +1064,33 @@ function DeploymentScreen({
     }
   }, [receipt, txHash, writeContractAsync, publicClient, backgroundGlyphs, foregroundGlyphs, backgroundColors, glyphColors, colors, address, setEditionAddress, setArtTxHash, setError, setIsCreating]);
 
-  useEffect(() => {
-    if (artReceipt && editionAddress) {
-      setIsCreating(false);
-      setIsArtProcessing(false);
-      setPage(3);
-    }
-  }, [artReceipt, editionAddress, setPage]);
+useEffect(() => {
+  if (artReceipt && editionAddress) {
+    setIsCreating(false);
+    setIsArtProcessing(false);
+    // Trigger PNG generation
+    setTimeout(async () => {
+      try {
+        const response = await fetch('/api/trigger-png', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ editionAddress }),
+        });
+        if (!response.ok) {
+          console.error(`Failed to trigger PNG generation for ${editionAddress}: ${response.status}`);
+          setError(`Failed to trigger image generation: ${response.status}`);
+        } else {
+          console.log(`Triggered PNG generation for ${editionAddress}`);
+        }
+      } catch (err) {
+        console.error(`Error triggering PNG for ${editionAddress}:`, err);
+        setError(`Error triggering image generation: ${err.message || 'Unknown error'}`);
+      } finally {
+        setPage(3); // Navigate to page 3 after attempting PNG trigger
+      }
+    }, 5000); // 5-second delay to match editor.tsx
+  }
+}, [artReceipt, editionAddress, setPage, setError]);
 
   const canMint = () => {
     const usedColorIndices = new Set<number>(
