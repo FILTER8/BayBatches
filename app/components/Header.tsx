@@ -5,6 +5,7 @@ import { useAddFrame, useMiniKit } from '@coinbase/onchainkit/minikit';
 import { useCallback, useMemo, useState } from 'react';
 import { Plus, Check, Book, LogOut, LogIn } from '@geist-ui/icons';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { Connector } from 'wagmi';
 
 export default function Header() {
   const router = useRouter();
@@ -46,7 +47,7 @@ export default function Header() {
     return null;
   }, [context, frameAdded, handleAddFrame]);
 
-  const getConnectorName = (connector: any) => {
+  const getConnectorName = (connector: Connector) => {
     if (connector.id === 'farcasterFrame') return 'Farcaster Wallet';
     if (connector.id === 'coinbase') return 'Coinbase Wallet';
     if (connector.id === 'injected') return 'MetaMask';
