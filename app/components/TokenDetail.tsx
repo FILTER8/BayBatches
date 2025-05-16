@@ -23,7 +23,6 @@ interface TokenDetailProps {
 }
 
 const LAUNCHPAD_FEE = '0.0004';
-const ALCHEMY_URL = process.env.NEXT_PUBLIC_ALCHEMY_URL || '';
 
 export function TokenDetail({ edition, tokenId = 1 }: TokenDetailProps) {
   const [showCollectedOverlay, setShowCollectedOverlay] = useState(false);
