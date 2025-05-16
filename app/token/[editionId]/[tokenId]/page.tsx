@@ -2,7 +2,6 @@
 
 import { useQuery } from '@apollo/client';
 import { ethers } from 'ethers';
-import MintbayEditionAbi from '../../../contracts/MintbayEdition.json';
 import { TokenDetail } from '../../../components/TokenDetail';
 import { EDITION_QUERY } from '../../../graphql/queries';
 
