@@ -72,3 +72,21 @@ export const ALL_EDITIONS_QUERY = gql`
     }
   }
 `;
+
+export const EDITION_QUERY = gql`
+  query Edition($id: ID!) {
+    edition(id: $id) {
+      id
+      name
+      creator { id }
+      createdAt
+      palette
+      totalSupply
+      editionSize
+      price
+      isFreeMint
+      paused
+      glyphContract { id }
+    }
+  }
+`;
