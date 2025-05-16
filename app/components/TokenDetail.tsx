@@ -6,6 +6,7 @@ import confetti from 'canvas-confetti';
 import { useAccount, useSwitchChain, useWriteContract } from 'wagmi';
 import MemoizedNFTImage from './NFTImage';
 import MintbayEditionAbi from '../contracts/MintbayEdition.json';
+import { sdk } from '@farcaster/frame-sdk';
 
 interface Edition {
   id: string;
@@ -23,12 +24,28 @@ interface TokenDetailProps {
 }
 
 const LAUNCHPAD_FEE = '0.0004';
+const ALCHEMY_URL = process.env.NEXT_PUBLIC_ALCHEMY_URL || '';
+const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://your-app-url.com';
 
 export function TokenDetail({ edition, tokenId = 1 }: TokenDetailProps) {
   const [showCollectedOverlay, setShowCollectedOverlay] = useState(false);
   const { address: walletAddress, isConnected } = useAccount();
   const { switchChain } = useSwitchChain();
   const { writeContract, data: txHash, error: writeError, isPending: isWriting } = useWriteContract();
+
+  const handleShareToFarcaster = async () => {
+    const embedUrl = `${APP_URL}/token/${edition.id}/1`;
+    try {
+      await sdk.actions.composeCast({
+        text: `Check out ${edition.name} on Mintbay! Collect this NFT now 👇`,
+        embeds: [embedUrl],
+      });
+      console.log('Cast composer opened with embed:', embedUrl);
+    } catch (error) {
+      console.error('Error sharing to Farcaster:', error);
+      alert('Failed to share to Farcaster. Please try again.');
+    }
+  };
 
   useEffect(() => {
     if (txHash) {
@@ -58,7 +75,7 @@ export function TokenDetail({ edition, tokenId = 1 }: TokenDetailProps) {
     <div className="flex flex-col items-center">
       <h2 className="text-xl font-bold mb-2 mt-0">{edition.name}</h2>
       <div className="w-full max-w-md mb-4 relative">
-        <MemoizedNFTImage address={edition.id} tokenId={tokenId} />
+        <MemoizedNFTImage address={edition.id} tokenId={tokenId} alchemyUrl={ALCHEMY_URL} />
         {showCollectedOverlay && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-[#ffffff] text-lg font-medium">
             collected
@@ -77,8 +94,8 @@ export function TokenDetail({ edition, tokenId = 1 }: TokenDetailProps) {
                 return;
               }
               try {
-                console.log("Switching to Base Sepolia...");
-                await switchChain({ chainId: 84532 });
+                console.log("Switching to Base Mainnet...");
+                await switchChain({ chainId: 8453 });
                 console.log("Chain switched, preparing transaction...");
                 const baseCost = edition.isFreeMint ? 0 : Number(ethers.formatEther(edition.price));
                 const totalCost = baseCost + Number(LAUNCHPAD_FEE);
@@ -137,6 +154,12 @@ export function TokenDetail({ edition, tokenId = 1 }: TokenDetailProps) {
           Please connect your wallet to collect.
         </div>
       )}
+      <button
+        onClick={handleShareToFarcaster}
+        className="w-full max-w-md py-2 px-4 mt-2 text-sm tracking-[0.1em] text-[#ffffff] bg-purple-600 hover:bg-purple-700 rounded"
+      >
+        Share to Farcaster
+      </button>
       <a
         href={`https://mintbay.co/token/${edition.id}`}
         target="_blank"
