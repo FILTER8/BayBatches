@@ -32,7 +32,7 @@ interface Edition {
   price: string;
   isFreeMint: boolean;
   paused: boolean;
-  glyphContract?: GlyphSet; // Updated to object
+  glyphContract?: GlyphSet;
 }
 
 interface GraphData {
@@ -40,14 +40,13 @@ interface GraphData {
 }
 
 const GLYPH_SET_ADDRESS = '0x8A7075295bb7f8aB5dC5BdA75E0B726bB289af40';
-const ALCHEMY_URL = process.env.NEXT_PUBLIC_ALCHEMY_URL || '';
 
-const provider = ALCHEMY_URL ? new ethers.JsonRpcProvider(ALCHEMY_URL) : null;
+const provider = null; // Provider disabled since ALCHEMY_URL is unused
 const glyphContractCache = new Map<string, string | null>();
 
 async function getGlyphContractFromEdition(address: string): Promise<string | null> {
   if (!provider) {
-    console.error('Provider is not initialized due to missing ALCHEMY_URL');
+    console.error('Provider is not initialized');
     return null;
   }
   if (glyphContractCache.has(address)) {
@@ -98,7 +97,7 @@ export default function Gallery() {
         price: e.price || '0',
         isFreeMint: e.isFreeMint ?? false,
         paused: e.paused ?? false,
-        glyphContract: e.glyphContract, // Now an object
+        glyphContract: e.glyphContract,
       })),
     };
   }, [graphData]);
@@ -287,7 +286,7 @@ export default function Gallery() {
                         setSelectedEditionIndex(index);
                       }}
                     >
-                      <MemoizedNFTImage address={edition.id} tokenId={1} alchemyUrl={ALCHEMY_URL} />
+                      <MemoizedNFTImage address={edition.id} tokenId={1} />
                     </div>
                   ) : null}
                 </div>
