@@ -79,11 +79,11 @@ export function Leaderboard({ mostCollected, mostCreated }: LeaderboardProps) {
                   className="text-sm font-medium truncate"
                   onError={(error) => console.error(`Name error for ${entry.walletAddress}:`, error)}
                 >
-                  {({ name }) => (
-                    <span className="text-sm font-medium truncate">
-                      {name || truncateAddress(entry.walletAddress)}
-                    </span>
-                  )}
+                  {({ name }: { name: string | null }): ReactNode => (
+  <span className="text-sm font-medium truncate">
+    {name || truncateAddress(entry.walletAddress)}
+  </span>
+)}
                 </Name>
               </div>
               <span className="text-sm ml-auto">
