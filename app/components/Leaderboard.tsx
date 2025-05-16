@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, ReactNode } from 'react';
 import { Avatar, Name } from '@coinbase/onchainkit/identity';
 import { base } from 'wagmi/chains';
 
@@ -27,6 +27,13 @@ export function Leaderboard({ mostCollected, mostCreated }: LeaderboardProps) {
     if (!address) return '';
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
+
+  // Render prop function for Name component
+  const renderName = ({ name }: { name: string | null }): ReactNode => (
+    <span className="text-sm font-medium truncate">
+      {name || truncateAddress(entry.walletAddress)}
+    </span>
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -79,11 +86,7 @@ export function Leaderboard({ mostCollected, mostCreated }: LeaderboardProps) {
                   className="text-sm font-medium truncate"
                   onError={(error) => console.error(`Name error for ${entry.walletAddress}:`, error)}
                 >
-                  {({ name }: { name: string | null }) => (
-                    <span className="text-sm font-medium truncate">
-                      {name || truncateAddress(entry.walletAddress)}
-                    </span>
-                  )}
+                  {renderName}
                 </Name>
               </div>
               <span className="text-sm ml-auto">
