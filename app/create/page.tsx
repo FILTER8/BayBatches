@@ -1082,13 +1082,14 @@ useEffect(() => {
         } else {
           console.log(`Triggered PNG generation for ${editionAddress}`);
         }
-      } catch (err) {
-        console.error(`Error triggering PNG for ${editionAddress}:`, err);
-        setError(`Error triggering image generation: ${err.message || 'Unknown error'}`);
-      } finally {
-        setPage(3); // Navigate to page 3 after attempting PNG trigger
-      }
-    }, 5000); // 5-second delay to match editor.tsx
+  } catch (err) {
+    console.error(`Error triggering PNG for ${editionAddress}:`, err);
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    setError(`Error triggering image generation: ${errorMessage}`);
+  } finally {
+    setPage(3);
+  }
+}, 5000);
   }
 }, [artReceipt, editionAddress, setPage, setError]);
 
