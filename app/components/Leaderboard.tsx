@@ -28,13 +28,6 @@ export function Leaderboard({ mostCollected, mostCreated }: LeaderboardProps) {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
-  // Render prop function for Name component
-  const renderName = ({ name }: { name: string | null }): ReactNode => (
-    <span className="text-sm font-medium truncate">
-      {name || truncateAddress(entry.walletAddress)}
-    </span>
-  );
-
   return (
     <div className="flex flex-col gap-4">
       <div className="sticky top-[40px] z-30 flex justify-center">
@@ -63,39 +56,48 @@ export function Leaderboard({ mostCollected, mostCreated }: LeaderboardProps) {
         {entries.length === 0 ? (
           <p className="text-sm text-gray-500 text-center">No data available</p>
         ) : (
-          entries.map((entry, index) => (
-            <div
-              key={entry.walletAddress}
-              className="flex items-center gap-2 p-2 w-full h-11 border border-gray-300 cursor-pointer hover:bg-gray-100"
-              onClick={() => {
-                console.log(`Navigating to user: ${entry.walletAddress}`);
-                router.push(`/user/${entry.walletAddress}`);
-              }}
-            >
-              <span className="text-sm font-medium w-6">{index + 1}.</span>
-              <div className="flex items-center gap-2">
-                <Avatar
-                  address={entry.walletAddress as `0x${string}`}
-                  chain={base}
-                  className="w-8 h-8 rounded-full"
-                  onError={(error) => console.error(`Avatar error for ${entry.walletAddress}:`, error)}
-                />
-                <Name
-                  address={entry.walletAddress as `0x${string}`}
-                  chain={base}
-                  className="text-sm font-medium truncate"
-                  onError={(error) => console.error(`Name error for ${entry.walletAddress}:`, error)}
-                >
-                  {renderName}
-                </Name>
-              </div>
-              <span className="text-sm ml-auto">
-                {tab === 'collected'
-                  ? `${entry.tokensOwnedCount} tokens`
-                  : `${entry.editionsCreatedCount} editions`}
+          entries.map((entry, index) => {
+            // Render prop function for Name component
+            const renderName = ({ name }: { name: string | null }): ReactNode => (
+              <span className="text-sm font-medium truncate">
+                {name || truncateAddress(entry.walletAddress)}
               </span>
-            </div>
-          ))
+            );
+
+            return (
+              <div
+                key={entry.walletAddress}
+                className="flex items-center gap-2 p-2 w-full h-11 border border-gray-300 cursor-pointer hover:bg-gray-100"
+                onClick={() => {
+                  console.log(`Navigating to user: ${entry.walletAddress}`);
+                  router.push(`/user/${entry.walletAddress}`);
+                }}
+              >
+                <span className="text-sm font-medium w-6">{index + 1}.</span>
+                <div className="flex items-center gap-2">
+                  <Avatar
+                    address={entry.walletAddress as `0x${string}`}
+                    chain={base}
+                    className="w-8 h-8 rounded-full"
+                    onError={(error) => console.error(`Avatar error for ${entry.walletAddress}:`, error)}
+                  />
+                  <Name
+                    address={entry.walletAddress as `0x${string}`}
+                    chain={base}
+                    className="text-sm font-medium truncate"
+                    onError={(error) => console.error(`Name error for ${entry.walletAddress}:`, error)}
+                  >
+                    {renderName}
+                  </Name>
+                </div>
+                <span className="text-sm ml-auto">
+                  {tab === 'collected'
+                    ? `${entry.tokensOwnedCount} tokens`
+                    : `${entry.editionsCreatedCount} editions`}
+                </span>
+              </div>
+            );
+          })
         )}
       </div>
     </div>
