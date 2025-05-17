@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: FramePageProps): Promise<Meta
         'fc:frame:button:1:target': `${baseUrl}/api/collect/${id.toLowerCase()}`,
         'fc:frame:button:2': 'Create',
         'fc:frame:button:2:action': 'link',
-        'fc:frame:button:2:target': 'https://bay-batches.vercel.app',
+        'fc:frame:button:2:target': 'https://warpcast.com/miniapps/NoE3DOFVe3dr/baybatches',
         'fc:frame:post_url': `${baseUrl}/api/frame-callback`,
       },
     };
@@ -126,7 +126,7 @@ export async function generateMetadata({ params }: FramePageProps): Promise<Meta
       'fc:frame:button:1:target': `${baseUrl}/api/collect/${id.toLowerCase()}`,
       'fc:frame:button:2': 'Create',
       'fc:frame:button:2:action': 'link',
-      'fc:frame:button:2:target': 'https://bay-batches.vercel.app',
+      'fc:frame:button:2:target': 'https://warpcast.com/miniapps/NoE3DOFVe3dr/baybatches',
       'fc:frame:post_url': `${baseUrl}/api/frame-callback`,
     },
   };

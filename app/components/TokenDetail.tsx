@@ -33,7 +33,7 @@ export function TokenDetail({ edition, tokenId = 1 }: TokenDetailProps) {
   const { writeContract, data: txHash, error: writeError, isPending: isWriting } = useWriteContract();
 
   const handleShareToFarcaster = async () => {
-    const frameUrl = `${BASE_URL}/frames/${edition.id.toLowerCase()}`;
+    const frameUrl = `${BASE_URL}/frame/${edition.id.toLowerCase()}`;
     const imageUrl = `https://pub-bd7c5d8a825145c691a3ad40196fd45c.r2.dev/${edition.id.toLowerCase()}.png`;
     try {
       await sdk.actions.composeCast({
