@@ -110,16 +110,26 @@ export async function POST(req: Request, context: { params: { editionId: string 
       chainId: 8453,
     });
 
-    const transaction = {
-      chainId: 8453, // Base mainnet
-      to: editionId, // Validated address
-      data: transactionData,
-      value: totalCostWei.toString(),
-    };
-
     const response = NextResponse.json({
-      transaction,
-      message: `Mint ${editionId}`,
+      type: 'transaction',
+      method: 'eth_sendTransaction',
+      params: {
+        chainId: 'eip155:8453',
+        to: editionId,
+        data: transactionData,
+        value: totalCostWei.toString(),
+      },
+    });
+
+    console.log(`Response for editionId: ${editionId}`, {
+      type: 'transaction',
+      method: 'eth_sendTransaction',
+      params: {
+        chainId: 'eip155:8453',
+        to: editionId,
+        data: transactionData,
+        value: totalCostWei.toString(),
+      },
     });
 
     response.headers.set('Access-Control-Allow-Origin', '*');
