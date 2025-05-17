@@ -24,7 +24,7 @@ interface TokenDetailProps {
 }
 
 const LAUNCHPAD_FEE = '0.0004';
-const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://your-app-url.com';
+const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://bay-batches.vercel.app';
 
 export function TokenDetail({ edition, tokenId = 1 }: TokenDetailProps) {
   const [showCollectedOverlay, setShowCollectedOverlay] = useState(false);
@@ -33,13 +33,19 @@ export function TokenDetail({ edition, tokenId = 1 }: TokenDetailProps) {
   const { writeContract, data: txHash, error: writeError, isPending: isWriting } = useWriteContract();
 
   const handleShareToFarcaster = async () => {
-    const embedUrl = `${APP_URL}/token/${edition.id}/1`;
+    const frameUrl = `${BASE_URL}/frames/${edition.id.toLowerCase()}`;
+    const imageUrl = `https://pub-bd7c5d8a825145c691a3ad40196fd45c.r2.dev/${edition.id.toLowerCase()}.png`;
     try {
       await sdk.actions.composeCast({
-        text: `Check out ${edition.name} on Mintbay! Create and Collect now 👇`,
-        embeds: [embedUrl],
+        text: `Collect ${edition.name} on Mintbay! 🎨`,
+        embeds: [frameUrl],
       });
-      console.log('Cast composer opened with embed:', embedUrl);
+      console.log('Cast composer opened with Frame:', {
+        frameUrl,
+        imageUrl,
+        editionId: edition.id,
+        walletAddress,
+      });
     } catch (error) {
       console.error('Error sharing to Farcaster:', error);
       alert('Failed to share to Farcaster. Please try again.');
@@ -170,3 +176,5 @@ export function TokenDetail({ edition, tokenId = 1 }: TokenDetailProps) {
     </div>
   );
 }
+
+export default TokenDetail;

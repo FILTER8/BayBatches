@@ -1,5 +1,4 @@
-'use client';
-
+import { Metadata } from 'next';
 import { useQuery } from '@apollo/client';
 import { ethers } from 'ethers';
 import { TokenDetail } from '../../../components/TokenDetail';
@@ -30,64 +29,102 @@ interface TokenPageProps {
   };
 }
 
-export default function TokenPage({ params }: TokenPageProps) {
-  const { editionId, tokenId } = params;
+const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://your-app-url.com';
+const IMAGE_BASE_URL = 'https://pub-bd7c5d8a825145c691a3ad40196fd45c.r2.dev';
 
-  // Validate editionId
+export async function generateMetadata({ params }: TokenPageProps): Promise<Metadata> {
+  const { editionId } = params;
+
   if (!ethers.isAddress(editionId)) {
-    throw new Error('Invalid editionId');
+    return {
+      title: 'Invalid Edition | Mintbay',
+      description: 'The specified edition ID is invalid.',
+    };
   }
 
-  const { data, loading, error } = useQuery<EditionData>(EDITION_QUERY, {
-    variables: { id: editionId.toLowerCase() },
-    fetchPolicy: 'cache-and-network',
-  });
+  const imageUrl = `${IMAGE_BASE_URL}/${editionId.toLowerCase()}.png`;
 
-  const imageUrl = `https://pub-bd7c5d8a825145c691a3ad40196fd45c.r2.dev/${editionId.toLowerCase()}.png`;
-  const appUrl = process.env.NEXT_PUBLIC_URL || 'https://your-app-url.com';
-  const frameEmbed = {
-    version: 'next',
-    imageUrl: imageUrl,
-    button: {
-      title: 'Collect',
-      action: {
-        type: 'launch_frame',
-        name: 'Mintbay Collect',
-        url: `${appUrl}/token/${editionId}/1`,
-        splashImageUrl: imageUrl,
-        splashBackgroundColor: '#f5f0ec',
+  // Fetch edition data server-side
+  try {
+    const { data } = await import('@apollo/client').then(({ useQuery }) =>
+      useQuery<EditionData>(EDITION_QUERY, {
+        variables: { id: editionId.toLowerCase() },
+        fetchPolicy: 'cache-and-network',
+      })
+    );
+
+    const edition = data?.edition;
+    const name = edition?.name || 'Sample NFT';
+
+    return {
+      title: `${name} | Mintbay`,
+      description: `Collect ${name} on Mintbay!`,
+      openGraph: {
+        title: `${name} | Mintbay`,
+        description: `Collect ${name} on Mintbay!`,
+        url: `${APP_URL}/token/${editionId}/1`,
+        images: [
+          {
+            url: imageUrl,
+            width: 1200,
+            height: 630,
+            alt: `${name} NFT`,
+          },
+        ],
+        type: 'website',
       },
-    },
-  };
+      other: {
+        'fc:frame': JSON.stringify({
+          version: 'next',
+          imageUrl: imageUrl,
+          button: {
+            title: 'Collect',
+            action: {
+              type: 'launch_frame',
+              name: 'Mintbay Collect',
+              url: `${APP_URL}/token/${editionId}/1`,
+              splashImageUrl: imageUrl,
+              splashBackgroundColor: '#f5f0ec',
+            },
+          },
+        }),
+      },
+    };
+  } catch (error) {
+    console.error('Error fetching metadata:', error);
+    return {
+      title: 'Error | Mintbay',
+      description: 'Failed to load edition data.',
+      openGraph: {
+        title: 'Error | Mintbay',
+        description: 'Failed to load edition data.',
+        url: `${APP_URL}/token/${editionId}/1`,
+        images: [{ url: imageUrl, width: 1200, height: 630, alt: 'Mintbay NFT' }],
+        type: 'website',
+      },
+    };
+  }
+}
 
-  if (loading) {
+export default async function TokenPage({ params }: TokenPageProps) {
+  const { editionId, tokenId } = params;
+
+  if (!ethers.isAddress(editionId)) {
     return (
-      <div className="flex justify-center mt-4">
-        <svg
-          className="animate-spin h-5 w-5 text-gray-500"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            className="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="4"
-          ></circle>
-          <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-          ></path>
-        </svg>
+      <div className="text-sm text-red-500 text-center mt-4">
+        Invalid edition ID
       </div>
     );
   }
 
-  if (error || !data?.edition) {
+  const { data, error } = await import('@apollo/client').then(({ useQuery }) =>
+    useQuery<EditionData>(EDITION_QUERY, {
+      variables: { id: editionId.toLowerCase() },
+      fetchPolicy: 'cache-and-network',
+    })
+  );
+
+  if (!data?.edition || error) {
     return (
       <div className="text-sm text-red-500 text-center mt-4">
         Error loading token: {error?.message || 'Edition not found'}
@@ -106,16 +143,8 @@ export default function TokenPage({ params }: TokenPageProps) {
   };
 
   return (
-    <html lang="en">
-      <head>
-        <meta name="fc:frame" content={JSON.stringify(frameEmbed)} />
-        <meta name="og:image" content={imageUrl} />
-        <meta name="og:title" content={edition.name} />
-        <meta name="og:description" content={`Collect ${edition.name} on Mintbay!`} />
-      </head>
-      <body>
-        <TokenDetail edition={edition} tokenId={Number(tokenId)} />
-      </body>
-    </html>
+    <div className="flex justify-center">
+      <TokenDetail edition={edition} tokenId={Number(tokenId)} />
+    </div>
   );
 }
