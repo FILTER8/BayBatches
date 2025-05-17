@@ -45,8 +45,6 @@ export async function POST(req: Request, context: { params: { editionId: string 
       contract.MAX_BATCH_MINT().catch(e => { throw new Error(`maxBatchMint call failed: ${e.message}`); }),
     ]);
 
-    const quantity = BigInt(1); // Hardcoded for Frame
-
     console.log(`Contract data for ${editionId}`, {
       priceEth: ethers.formatEther(priceWei),
       isFreeMint,
@@ -56,16 +54,24 @@ export async function POST(req: Request, context: { params: { editionId: string 
       maxBatchMint: maxBatchMint.toString(),
     });
 
-    if (paused) {
-      console.error(`Contract at ${editionId} is paused`);
-      return NextResponse.json({ error: 'Contract is paused' }, { status: 400 });
+    // Validate editionSize
+    if (editionSize <= 0) {
+      console.error(`Invalid editionSize for ${editionId}: ${editionSize}`);
+      return NextResponse.json({ error: 'Invalid edition size' }, { status: 400 });
     }
 
+    console.log(`Checking mint status: nextTokenId=${nextTokenId}, editionSize=${editionSize}`);
     if (nextTokenId > editionSize) {
       console.error(`Contract at ${editionId} is fully minted (nextTokenId: ${nextTokenId}, editionSize: ${editionSize})`);
       return NextResponse.json({ error: 'Edition is fully minted' }, { status: 400 });
     }
 
+    if (paused) {
+      console.error(`Contract at ${editionId} is paused`);
+      return NextResponse.json({ error: 'Contract is paused' }, { status: 400 });
+    }
+
+    const quantity = BigInt(1); // Hardcoded for Frame
     if (quantity > maxBatchMint) {
       console.error(`Quantity ${quantity} exceeds MAX_BATCH_MINT (${maxBatchMint}) for ${editionId}`);
       return NextResponse.json({ error: `Batch size limited to ${maxBatchMint} NFTs` }, { status: 400 });
@@ -89,7 +95,7 @@ export async function POST(req: Request, context: { params: { editionId: string 
         return NextResponse.json({ error: 'Invalid contract ABI: collectBatch function missing' }, { status: 500 });
       }
       transactionData = iface.encodeFunctionData('collectBatch', [quantity]);
-    } catch (abiError) {
+    } catch (abiError: Error) {
       console.error(`ABI encoding error for editionId: ${editionId}`, abiError);
       return NextResponse.json({ error: `Failed to encode transaction data: ${abiError.message}` }, { status: 500 });
     }
@@ -122,7 +128,7 @@ export async function POST(req: Request, context: { params: { editionId: string 
     response.headers.set('Content-Type', 'application/json');
 
     return response;
-  } catch (error) {
+  } catch (error: Error) {
     console.error(`Error generating transaction for editionId: ${editionId}`, {
       message: error.message,
       stack: error.stack,
