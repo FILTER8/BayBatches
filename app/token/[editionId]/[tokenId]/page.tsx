@@ -1,8 +1,7 @@
 import { Metadata } from 'next';
-import { useQuery } from '@apollo/client';
+import { ApolloClient, InMemoryCache, gql } from '@apollo/client';
 import { ethers } from 'ethers';
 import { TokenDetail } from '../../../components/TokenDetail';
-import { EDITION_QUERY } from '../../../graphql/queries';
 
 interface Edition {
   id: string;
@@ -29,13 +28,14 @@ interface TokenPageProps {
   };
 }
 
-const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://your-app-url.com';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://bay-batches.vercel.app';
 const IMAGE_BASE_URL = 'https://pub-bd7c5d8a825145c691a3ad40196fd45c.r2.dev';
 
 export async function generateMetadata({ params }: TokenPageProps): Promise<Metadata> {
   const { editionId } = params;
 
   if (!ethers.isAddress(editionId)) {
+    console.error('Invalid editionId:', editionId);
     return {
       title: 'Invalid Edition | Mintbay',
       description: 'The specified edition ID is invalid.',
@@ -43,15 +43,35 @@ export async function generateMetadata({ params }: TokenPageProps): Promise<Meta
   }
 
   const imageUrl = `${IMAGE_BASE_URL}/${editionId.toLowerCase()}.png`;
+  console.log('Generating metadata for editionId:', { editionId, imageUrl });
 
-  // Fetch edition data server-side
+  const client = new ApolloClient({
+    uri: process.env.NEXT_PUBLIC_GRAPHQL_URL,
+    cache: new InMemoryCache(),
+  });
+
   try {
-    const { data } = await import('@apollo/client').then(({ useQuery }) =>
-      useQuery<EditionData>(EDITION_QUERY, {
-        variables: { id: editionId.toLowerCase() },
-        fetchPolicy: 'cache-and-network',
-      })
-    );
+    const { data, errors } = await client.query<EditionData>({
+      query: gql`
+        query TokenPageQuery($id: ID!) {
+          edition(id: $id) {
+            id
+            name
+            totalSupply
+            editionSize
+            price
+            isFreeMint
+            paused
+          }
+        }
+      `,
+      variables: { id: editionId.toLowerCase() },
+    });
+
+    if (errors) {
+      console.error('GraphQL errors:', errors);
+      throw new Error('GraphQL query errors');
+    }
 
     const edition = data?.edition;
     const name = edition?.name || 'Sample NFT';
@@ -62,7 +82,7 @@ export async function generateMetadata({ params }: TokenPageProps): Promise<Meta
       openGraph: {
         title: `${name} | Mintbay`,
         description: `Collect ${name} on Mintbay!`,
-        url: `${APP_URL}/token/${editionId}/1`,
+        url: `${BASE_URL}/token/${editionId.toLowerCase()}/1`,
         images: [
           {
             url: imageUrl,
@@ -74,20 +94,15 @@ export async function generateMetadata({ params }: TokenPageProps): Promise<Meta
         type: 'website',
       },
       other: {
-        'fc:frame': JSON.stringify({
-          version: 'next',
-          imageUrl: imageUrl,
-          button: {
-            title: 'Collect',
-            action: {
-              type: 'launch_frame',
-              name: 'Mintbay Collect',
-              url: `${APP_URL}/token/${editionId}/1`,
-              splashImageUrl: imageUrl,
-              splashBackgroundColor: '#f5f0ec',
-            },
-          },
-        }),
+        'fc:frame': 'vNext',
+        'fc:frame:image': imageUrl,
+        'fc:frame:button:1': 'Collect',
+        'fc:frame:button:1:action': 'tx',
+        'fc:frame:button:1:target': `${BASE_URL}/api/collect/${editionId.toLowerCase()}`,
+        'fc:frame:button:2': 'Create',
+        'fc:frame:button:2:action': 'link',
+        'fc:frame:button:2:target': 'https://bay-batches.vercel.app',
+        'fc:frame:post_url': `${BASE_URL}/api/frame-callback`,
       },
     };
   } catch (error) {
@@ -98,7 +113,7 @@ export async function generateMetadata({ params }: TokenPageProps): Promise<Meta
       openGraph: {
         title: 'Error | Mintbay',
         description: 'Failed to load edition data.',
-        url: `${APP_URL}/token/${editionId}/1`,
+        url: `${BASE_URL}/token/${editionId.toLowerCase()}/1`,
         images: [{ url: imageUrl, width: 1200, height: 630, alt: 'Mintbay NFT' }],
         type: 'website',
       },
@@ -110,6 +125,7 @@ export default async function TokenPage({ params }: TokenPageProps) {
   const { editionId, tokenId } = params;
 
   if (!ethers.isAddress(editionId)) {
+    console.error('Invalid editionId in render:', editionId);
     return (
       <div className="text-sm text-red-500 text-center mt-4">
         Invalid edition ID
@@ -117,14 +133,41 @@ export default async function TokenPage({ params }: TokenPageProps) {
     );
   }
 
-  const { data, error } = await import('@apollo/client').then(({ useQuery }) =>
-    useQuery<EditionData>(EDITION_QUERY, {
+  const client = new ApolloClient({
+    uri: process.env.NEXT_PUBLIC_GRAPHQL_URL,
+    cache: new InMemoryCache(),
+  });
+
+  let data: EditionData | undefined;
+  let error: Error | undefined;
+  try {
+    const result = await client.query<EditionData>({
+      query: gql`
+        query TokenPageQuery($id: ID!) {
+          edition(id: $id) {
+            id
+            name
+            totalSupply
+            editionSize
+            price
+            isFreeMint
+            paused
+          }
+        }
+      `,
       variables: { id: editionId.toLowerCase() },
-      fetchPolicy: 'cache-and-network',
-    })
-  );
+    });
+    data = result.data;
+    if (result.errors) {
+      throw new Error('GraphQL query errors');
+    }
+  } catch (err) {
+    error = err instanceof Error ? err : new Error('Unknown error');
+    console.error('Error loading edition:', { error, editionId });
+  }
 
   if (!data?.edition || error) {
+    console.error('Error loading edition:', { error, editionId });
     return (
       <div className="text-sm text-red-500 text-center mt-4">
         Error loading token: {error?.message || 'Edition not found'}

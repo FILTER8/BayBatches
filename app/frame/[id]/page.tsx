@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import Head from 'next/head';
+import Image from 'next/image';
 import { ApolloClient, InMemoryCache, gql } from '@apollo/client';
 import { ethers } from 'ethers';
 
@@ -144,10 +144,12 @@ export default async function FramePage({ params }: FramePageProps) {
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-2xl font-bold mb-4">Mint Your NFT</h1>
           <p className="text-sm mb-4">Claim a limited-edition NFT on Mintbay!</p>
-          <img
+          <Image
             src={`${baseUrl}/default-nft.png`}
             alt="Mint Your NFT"
-            className="mx-auto mb-4 max-w-xs aspect-square object-cover"
+            width={300}
+            height={300}
+            className="mx-auto mb-4 aspect-square object-cover"
           />
           <a
             href={baseUrl}
@@ -234,10 +236,12 @@ export default async function FramePage({ params }: FramePageProps) {
       <div className="max-w-7xl mx-auto text-center">
         <h1 className="text-2xl font-bold mb-4">{frameMeta.title}</h1>
         <p className="text-sm mb-4">{frameMeta.description}</p>
-        <img
+        <Image
           src={frameMeta.image}
           alt={frameMeta.title}
-          className="mx-auto mb-4 max-w-xs aspect-square object-cover"
+          width={300}
+          height={300}
+          className="mx-auto mb-4 aspect-square object-cover"
         />
         <a
           href={frameMeta.url}
