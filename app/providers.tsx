@@ -16,7 +16,10 @@ const wagmiConfig = createConfig({
     coinbaseWallet({
       appName: process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'BayBatches',
     }),
-    injected(),
+    injected({
+      target: 'metaMask', // Explicitly target MetaMask
+      shimDisconnect: true, // Ensure clean disconnection
+    }),
   ],
   transports: {
     [base.id]: http('https://mainnet.base.org'),
