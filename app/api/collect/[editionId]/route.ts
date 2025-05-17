@@ -112,9 +112,9 @@ export async function POST(req: Request, context: { params: { editionId: string 
 
     const response = NextResponse.json({
       type: 'transaction',
+      chainId: 'eip155:8453',
       method: 'eth_sendTransaction',
       params: {
-        chainId: 'eip155:8453',
         to: editionId,
         data: transactionData,
         value: totalCostWei.toString(),
@@ -123,9 +123,9 @@ export async function POST(req: Request, context: { params: { editionId: string 
 
     console.log(`Response for editionId: ${editionId}`, {
       type: 'transaction',
+      chainId: 'eip155:8453',
       method: 'eth_sendTransaction',
       params: {
-        chainId: 'eip155:8453',
         to: editionId,
         data: transactionData,
         value: totalCostWei.toString(),
