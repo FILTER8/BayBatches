@@ -36,7 +36,7 @@ export function TokenDetail({ edition, tokenId = 1 }: TokenDetailProps) {
     const embedUrl = `${APP_URL}/token/${edition.id}/1`;
     try {
       await sdk.actions.composeCast({
-        text: `Check out ${edition.name} on Mintbay! Collect this NFT now 👇`,
+        text: `Check out ${edition.name} on Mintbay! Create and Collect now 👇`,
         embeds: [embedUrl],
       });
       console.log('Cast composer opened with embed:', embedUrl);
@@ -155,7 +155,7 @@ export function TokenDetail({ edition, tokenId = 1 }: TokenDetailProps) {
       )}
       <button
         onClick={handleShareToFarcaster}
-        className="w-full max-w-md py-2 px-4 mt-2 text-sm tracking-[0.1em] text-[#ffffff] bg-purple-600 hover:bg-purple-700 rounded"
+        className="w-full max-w-md py-2 px-4 mt-2 text-sm tracking-[0.1em] text-[#ffffff] bg-purple-600 hover:bg-purple-700"
       >
         Share to Farcaster
       </button>

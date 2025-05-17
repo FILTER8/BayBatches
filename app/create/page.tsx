@@ -820,7 +820,7 @@ interface DeploymentScreenProps {
   setPage: (page: number) => void;
 }
 
-export function DeploymentScreen({
+function DeploymentScreen({
   name,
   setName,
   symbol,
@@ -933,7 +933,7 @@ export function DeploymentScreen({
     }
   };
 
-  useEffect(() => {
+useEffect(() => {
     if (receipt && !editionAddress && txHash) {
       const editionCreatedLog = receipt.logs.find(
         (log) =>
@@ -1063,6 +1063,7 @@ export function DeploymentScreen({
       setBaseArt();
     }
   }, [receipt, txHash, writeContractAsync, publicClient, backgroundGlyphs, foregroundGlyphs, backgroundColors, glyphColors, colors, address, setEditionAddress, setArtTxHash, setError, setIsCreating]);
+
 
   useEffect(() => {
     if (artReceipt && editionAddress) {
