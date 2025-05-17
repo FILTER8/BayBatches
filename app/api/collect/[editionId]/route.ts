@@ -95,9 +95,10 @@ export async function POST(req: Request, context: { params: { editionId: string 
         return NextResponse.json({ error: 'Invalid contract ABI: collectBatch function missing' }, { status: 500 });
       }
       transactionData = iface.encodeFunctionData('collectBatch', [quantity]);
-    } catch (abiError: Error) {
+    } catch (abiError: unknown) {
+      const errorMessage = abiError instanceof Error ? abiError.message : 'Unknown ABI error';
       console.error(`ABI encoding error for editionId: ${editionId}`, abiError);
-      return NextResponse.json({ error: `Failed to encode transaction data: ${abiError.message}` }, { status: 500 });
+      return NextResponse.json({ error: `Failed to encode transaction data: ${errorMessage}` }, { status: 500 });
     }
 
     console.log(`Generated transaction for editionId: ${editionId}`, {
@@ -128,12 +129,13 @@ export async function POST(req: Request, context: { params: { editionId: string 
     response.headers.set('Content-Type', 'application/json');
 
     return response;
-  } catch (error: Error) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error(`Error generating transaction for editionId: ${editionId}`, {
-      message: error.message,
-      stack: error.stack,
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
     });
-    return NextResponse.json({ error: `Failed to generate transaction: ${error.message}` }, { status: 500 });
+    return NextResponse.json({ error: `Failed to generate transaction: ${errorMessage}` }, { status: 500 });
   }
 }
 
